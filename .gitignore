@@ -1,0 +1,14 @@
+.DS_Store
+dist/
+.build/
+*.app/
+
+# Local bear assets. Put your own files here, but do not commit them by default.
+assets/*
+Resources/*
+
+# Local build leftovers
+*.icns
+*.png
+*.gif
+*.GIF
