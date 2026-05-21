@@ -6,9 +6,17 @@ dist/
 # Local bear assets. Put your own files here, but do not commit them by default.
 assets/*
 Resources/*
+macos/assets/*
+macos/Resources/*
+windows/assets/*
+windows/Resources/*
 
 # Local build leftovers
+__pycache__/
+*.pyc
+*.pyo
 *.icns
+*.ico
 *.png
 *.gif
 *.GIF
