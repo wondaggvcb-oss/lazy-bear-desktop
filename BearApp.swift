@@ -13,6 +13,97 @@ private let systemPrompt = """
 可以偶尔带一点颜文字。
 """
 
+private struct BearReminder: Codable, Identifiable {
+    let id: UUID
+    var title: String
+    var fireDate: Date
+}
+
+private struct BearData: Codable {
+    var memories: [String] = []
+    var personality: String = ""
+    var reminders: [BearReminder] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case memories
+        case personality
+        case reminders
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        memories = try container.decodeIfPresent([String].self, forKey: .memories) ?? []
+        personality = try container.decodeIfPresent(String.self, forKey: .personality) ?? ""
+        reminders = try container.decodeIfPresent([BearReminder].self, forKey: .reminders) ?? []
+    }
+}
+
+private final class BearStore {
+    private(set) var data: BearData
+    private let fileURL: URL
+
+    init() {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let directory = base.appendingPathComponent("lazy-bear-desktop", isDirectory: true)
+        fileURL = directory.appendingPathComponent("bear-memory.json")
+        if let saved = try? Data(contentsOf: fileURL),
+           let decoded = try? JSONDecoder().decode(BearData.self, from: saved) {
+            data = decoded
+        } else {
+            data = BearData()
+        }
+    }
+
+    func addMemory(_ text: String) {
+        data.memories.append(text)
+        save()
+    }
+
+    func clearMemories() {
+        data.memories.removeAll()
+        save()
+    }
+
+    func setPersonality(_ text: String) {
+        data.personality = text
+        save()
+    }
+
+    func clearPersonality() {
+        data.personality = ""
+        save()
+    }
+
+    func addReminder(_ reminder: BearReminder) {
+        data.reminders.append(reminder)
+        save()
+    }
+
+    func removeReminder(id: UUID) {
+        data.reminders.removeAll { $0.id == id }
+        save()
+    }
+
+    func clearReminders() {
+        data.reminders.removeAll()
+        save()
+    }
+
+    func save() {
+        do {
+            try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try encoder.encode(data).write(to: fileURL, options: .atomic)
+        } catch {
+            NSLog("BearStore save failed: \(error.localizedDescription)")
+        }
+    }
+}
+
 final class BearImageView: NSImageView {
     var onChat: (() -> Void)?
     private var mouseDownScreenPoint = NSPoint.zero
@@ -112,10 +203,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var stateIndex = 0
     private var timer: Timer?
     private var watchTimer: Timer?
+    private var reminderTimers: [UUID: Timer] = [:]
     private var keyMonitor: Any?
     private var apiKey: String?
     private var isWatchingScreen = false
     private var isCommentingOnScreen = false
+    private let store = BearStore()
     private let states = ["idle", "eat", "love", "car", "kiss", "lie", "wave"]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -124,6 +217,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         installKeyboardShortcuts()
         createWindow()
         showState(index: 0)
+        scheduleStoredReminders()
         NSApp.activate(ignoringOtherApps: true)
         timer = Timer.scheduledTimer(withTimeInterval: 16, repeats: true) { [weak self] _ in
             self?.nextState()
@@ -137,6 +231,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         timer?.invalidate()
         watchTimer?.invalidate()
+        reminderTimers.values.forEach { $0.invalidate() }
+        reminderTimers.removeAll()
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
@@ -154,6 +250,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         appMenu.addItem(actionItem(title: "换姿势", action: #selector(nextStateAction), keyEquivalent: "n"))
         appMenu.addItem(actionItem(title: "去右下角", action: #selector(cornerAction), keyEquivalent: "m"))
         appMenu.addItem(actionItem(title: "看屏幕/停下", action: #selector(toggleWatchAction), keyEquivalent: "s"))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(actionItem(title: "记住偏好", action: #selector(rememberAction), keyEquivalent: "r"))
+        appMenu.addItem(actionItem(title: "设置性格", action: #selector(personalityAction), keyEquivalent: "p"))
+        appMenu.addItem(actionItem(title: "查看性格", action: #selector(showPersonalityAction), keyEquivalent: ""))
+        appMenu.addItem(actionItem(title: "清空性格", action: #selector(clearPersonalityAction), keyEquivalent: ""))
+        appMenu.addItem(actionItem(title: "查看记忆", action: #selector(showMemoryAction), keyEquivalent: "l"))
+        appMenu.addItem(actionItem(title: "清空记忆", action: #selector(clearMemoryAction), keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(actionItem(title: "开始计时", action: #selector(startTimerAction), keyEquivalent: "i"))
+        appMenu.addItem(actionItem(title: "查看计时", action: #selector(showTimersAction), keyEquivalent: ""))
+        appMenu.addItem(actionItem(title: "清空计时", action: #selector(clearTimersAction), keyEquivalent: ""))
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(quitItem())
         appItem.submenu = appMenu
@@ -197,6 +304,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(actionItem(title: "去右下角", action: #selector(cornerAction), keyEquivalent: ""))
         menu.addItem(actionItem(title: "看屏幕/停下", action: #selector(toggleWatchAction), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(actionItem(title: "记住偏好", action: #selector(rememberAction), keyEquivalent: ""))
+        menu.addItem(actionItem(title: "设置性格", action: #selector(personalityAction), keyEquivalent: ""))
+        menu.addItem(actionItem(title: "查看性格", action: #selector(showPersonalityAction), keyEquivalent: ""))
+        menu.addItem(actionItem(title: "查看记忆", action: #selector(showMemoryAction), keyEquivalent: ""))
+        menu.addItem(actionItem(title: "开始计时", action: #selector(startTimerAction), keyEquivalent: ""))
+        menu.addItem(actionItem(title: "查看计时", action: #selector(showTimersAction), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(quitItem())
         return menu
     }
@@ -218,9 +332,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let key = event.charactersIgnoringModifiers?.lowercased()
-            if flags.contains(.command), key == "q" {
-                NSApp.terminate(nil)
-                return nil
+            if flags.contains(.command), let key {
+                switch key {
+                case "q":
+                    NSApp.terminate(nil)
+                    return nil
+                case "t":
+                    self.startChat()
+                    return nil
+                case "n":
+                    self.nextState()
+                    return nil
+                case "m":
+                    self.moveToBottomRight()
+                    return nil
+                case "s":
+                    self.toggleWatchAction()
+                    return nil
+                case "r":
+                    self.rememberPreference()
+                    return nil
+                case "p":
+                    self.setPersonality()
+                    return nil
+                case "l":
+                    self.showMemory()
+                    return nil
+                case "i":
+                    self.startReminder()
+                    return nil
+                default:
+                    break
+                }
             }
             if event.keyCode == 53 {
                 NSApp.terminate(nil)
@@ -248,6 +391,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             startWatchingScreen()
         }
+    }
+
+    @objc private func rememberAction() {
+        rememberPreference()
+    }
+
+    @objc private func personalityAction() {
+        setPersonality()
+    }
+
+    @objc private func showPersonalityAction() {
+        showPersonality()
+    }
+
+    @objc private func clearPersonalityAction() {
+        confirmAndClearPersonality()
+    }
+
+    @objc private func showMemoryAction() {
+        showMemory()
+    }
+
+    @objc private func clearMemoryAction() {
+        confirmAndClearMemory()
+    }
+
+    @objc private func startTimerAction() {
+        startReminder()
+    }
+
+    @objc private func showTimersAction() {
+        showTimers()
+    }
+
+    @objc private func clearTimersAction() {
+        confirmAndClearTimers()
     }
 
     @objc private func quitAction() {
@@ -299,6 +478,145 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
         askDeepSeek(apiKey: key, question: trimmed)
+    }
+
+    private func rememberPreference() {
+        guard let text = prompt(title: "熊记一下", message: "写一条你的偏好或要求。比如：回答短一点、提醒我喝水。") else {
+            return
+        }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        store.addMemory(trimmed)
+        showBubble("你好你好，有什么可以帮您。记住了，熊的小本本+1。")
+    }
+
+    private func setPersonality() {
+        let current = store.data.personality.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hint: String
+        if current.isEmpty {
+            hint = "写一段熊的人设/语气。比如：懒懒的，一针见血，但不要刻薄。"
+        } else {
+            hint = "当前性格：\(current)\n\n写新的性格；留空就不改。"
+        }
+        guard let text = prompt(title: "熊的性格", message: hint) else {
+            return
+        }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        store.setPersonality(trimmed)
+        showBubble("你好你好，有什么可以帮您。性格改好了，熊会照着演。")
+    }
+
+    private func showPersonality() {
+        let personality = store.data.personality.trimmingCharacters(in: .whitespacesAndNewlines)
+        if personality.isEmpty {
+            showAlert(title: "熊的性格", text: "还没有自定义性格。熊先按默认懒懒版本活着。")
+        } else {
+            showAlert(title: "熊的性格", text: personality)
+        }
+    }
+
+    private func confirmAndClearPersonality() {
+        guard confirm(title: "清空性格？", text: "熊会回到默认懒懒版本。") else { return }
+        store.clearPersonality()
+        showBubble("你好你好，有什么可以帮您。性格清空了，熊回默认档。")
+    }
+
+    private func showMemory() {
+        let memoryText: String
+        if store.data.memories.isEmpty {
+            memoryText = "还没有记忆。熊脑袋空空，但很轻。"
+        } else {
+            memoryText = store.data.memories.enumerated()
+                .map { "\($0.offset + 1). \($0.element)" }
+                .joined(separator: "\n")
+        }
+        showAlert(title: "熊的记忆", text: memoryText)
+    }
+
+    private func confirmAndClearMemory() {
+        guard confirm(title: "清空记忆？", text: "熊会忘掉已记录的偏好。") else { return }
+        store.clearMemories()
+        showBubble("你好你好，有什么可以帮您。记忆清空了，熊重新开机。")
+    }
+
+    private func startReminder() {
+        guard let title = prompt(title: "熊计时", message: "要提醒什么？比如：喝水、休息、看锅。") else {
+            return
+        }
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        guard let minutesText = prompt(title: "熊计时", message: "几分钟后提醒？只填数字，比如 25。") else {
+            return
+        }
+        let normalized = minutesText.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "，", with: ".")
+        guard let minutes = Double(normalized), minutes > 0 else {
+            showAlert(title: "熊没看懂", text: "分钟数填数字就好。比如 10 或 25。")
+            return
+        }
+
+        let reminder = BearReminder(
+            id: UUID(),
+            title: trimmedTitle,
+            fireDate: Date().addingTimeInterval(minutes * 60)
+        )
+        store.addReminder(reminder)
+        scheduleReminder(reminder)
+        showBubble("你好你好，有什么可以帮您。好，\(friendlyMinutes(minutes))后叫你。")
+    }
+
+    private func showTimers() {
+        let now = Date()
+        let active = store.data.reminders
+            .filter { $0.fireDate > now }
+            .sorted { $0.fireDate < $1.fireDate }
+
+        guard !active.isEmpty else {
+            showAlert(title: "熊的计时", text: "现在没有计时。熊也没被安排。")
+            return
+        }
+
+        let text = active.map { reminder in
+            let remaining = max(1, Int(ceil(reminder.fireDate.timeIntervalSince(now) / 60)))
+            return "- \(reminder.title)：约 \(remaining) 分钟后"
+        }.joined(separator: "\n")
+        showAlert(title: "熊的计时", text: text)
+    }
+
+    private func confirmAndClearTimers() {
+        guard confirm(title: "清空计时？", text: "熊会取消所有还没到点的提醒。") else { return }
+        reminderTimers.values.forEach { $0.invalidate() }
+        reminderTimers.removeAll()
+        store.clearReminders()
+        showBubble("你好你好，有什么可以帮您。计时都撤了，熊继续躺。")
+    }
+
+    private func scheduleStoredReminders() {
+        let now = Date()
+        for reminder in store.data.reminders {
+            if reminder.fireDate <= now {
+                fireReminder(reminder)
+            } else {
+                scheduleReminder(reminder)
+            }
+        }
+    }
+
+    private func scheduleReminder(_ reminder: BearReminder) {
+        reminderTimers[reminder.id]?.invalidate()
+        let interval = max(0.1, reminder.fireDate.timeIntervalSinceNow)
+        reminderTimers[reminder.id] = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            self?.fireReminder(reminder)
+        }
+    }
+
+    private func fireReminder(_ reminder: BearReminder) {
+        reminderTimers[reminder.id]?.invalidate()
+        reminderTimers[reminder.id] = nil
+        store.removeReminder(id: reminder.id)
+        showState(index: states.firstIndex(of: "wave") ?? stateIndex)
+        showAlert(title: "熊提醒你", text: "你好你好，有什么可以帮您。\(reminder.title)，到点了。")
     }
 
     private func startWatchingScreen() {
@@ -464,7 +782,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "model": "deepseek-chat",
             "messages": [
-                ["role": "system", "content": systemPrompt],
+                ["role": "system", "content": systemPromptWithMemory()],
                 ["role": "user", "content": question],
             ],
         ])
@@ -494,6 +812,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 completion(answer, nil)
             }
         }.resume()
+    }
+
+    private func systemPromptWithMemory() -> String {
+        let personality = store.data.personality.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !store.data.memories.isEmpty || !personality.isEmpty else {
+            return systemPrompt
+        }
+        let memory: String
+        if store.data.memories.isEmpty {
+            memory = "暂无"
+        } else {
+            memory = store.data.memories.suffix(20).map { "- \($0)" }.joined(separator: "\n")
+        }
+        let personalityText = personality.isEmpty ? "使用默认性格。" : personality
+        return """
+        \(systemPrompt)
+
+        用户自定义熊性格：
+        \(personalityText)
+
+        用户偏好记忆：
+        \(memory)
+
+        自定义性格优先于默认性格，但必须保留名字叫熊、第一句固定问候、回答简短这几条底线。
+        回答时自然遵守这些偏好；不要逐条复述“我记得”。
+        """
     }
 
     private func showBubble(_ text: String, duration: TimeInterval = 8) {
@@ -567,6 +911,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.makeKeyAndOrderFront(nil)
         let result = alert.runModal()
         return result == .alertFirstButtonReturn ? field.stringValue : nil
+    }
+
+    private func confirm(title: String, text: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        alert.addButton(withTitle: "清空")
+        alert.addButton(withTitle: "算了")
+        window.makeKeyAndOrderFront(nil)
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func friendlyMinutes(_ minutes: Double) -> String {
+        if minutes.rounded() == minutes {
+            return "\(Int(minutes)) 分钟"
+        }
+        return String(format: "%.1f 分钟", minutes)
     }
 
     private func showAlert(title: String, text: String) {
