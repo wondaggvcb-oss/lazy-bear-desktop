@@ -1,0 +1,438 @@
+import json
+import os
+import threading
+import time
+import tkinter as tk
+from pathlib import Path
+from tkinter import messagebox, simpledialog
+from urllib import error, request
+
+
+DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
+APP_DIR = Path(os.getenv("APPDATA", Path.home())) / "LazyBearDesktop"
+MEMORY_FILE = APP_DIR / "bear-memory.json"
+CONFIG_FILE = APP_DIR / "config.json"
+ASSET_DIR = Path(__file__).resolve().parent / "assets"
+ICON_PATH = Path(__file__).resolve().parent / "Resources" / "BearIcon.ico"
+TRANSPARENT_COLOR = "#00ff00"
+MAX_SIDE = 170
+
+SYSTEM_PROMPT = """你的名字叫熊，是一只懒懒的、可爱的桌面宠物。
+每次回答的第一句必须是：你好你好，有什么可以帮您。
+后续回答要一针见血，少废话，但语气软一点、可爱一点。
+不要热血，不要油腻，不要长篇安慰；像刚睡醒但看得很明白的小熊。
+可以偶尔带一点颜文字。"""
+
+STATES = ["idle", "eat", "love", "car", "kiss", "lie", "wave"]
+
+
+class BearStore:
+    def __init__(self):
+        APP_DIR.mkdir(parents=True, exist_ok=True)
+        self.data = {"memories": [], "personality": "", "reminders": []}
+        if MEMORY_FILE.exists():
+            try:
+                loaded = json.loads(MEMORY_FILE.read_text(encoding="utf-8"))
+                self.data.update({k: loaded.get(k, self.data[k]) for k in self.data})
+            except Exception:
+                pass
+
+    def save(self):
+        APP_DIR.mkdir(parents=True, exist_ok=True)
+        MEMORY_FILE.write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def add_memory(self, text):
+        self.data["memories"].append(text)
+        self.save()
+
+    def clear_memories(self):
+        self.data["memories"] = []
+        self.save()
+
+    def set_personality(self, text):
+        self.data["personality"] = text
+        self.save()
+
+    def clear_personality(self):
+        self.data["personality"] = ""
+        self.save()
+
+
+class BearApp:
+    def __init__(self):
+        self.store = BearStore()
+        self.root = tk.Tk()
+        self.root.title("熊")
+        self.apply_window_icon()
+        self.root.overrideredirect(True)
+        self.root.attributes("-topmost", True)
+        self.root.configure(bg=TRANSPARENT_COLOR)
+        try:
+            self.root.attributes("-transparentcolor", TRANSPARENT_COLOR)
+        except tk.TclError:
+            pass
+
+        self.label = tk.Label(self.root, bg=TRANSPARENT_COLOR, bd=0, highlightthickness=0)
+        self.label.pack()
+
+        self.menu = tk.Menu(self.root, tearoff=0)
+        self.menu.add_command(label="聊天", command=self.start_chat)
+        self.menu.add_command(label="换姿势", command=self.next_state)
+        self.menu.add_command(label="去右下角", command=self.move_to_bottom_right)
+        self.menu.add_separator()
+        self.menu.add_command(label="记住偏好", command=self.remember_preference)
+        self.menu.add_command(label="设置性格", command=self.set_personality)
+        self.menu.add_command(label="查看性格", command=self.show_personality)
+        self.menu.add_command(label="清空性格", command=self.clear_personality)
+        self.menu.add_command(label="查看记忆", command=self.show_memory)
+        self.menu.add_command(label="清空记忆", command=self.clear_memory)
+        self.menu.add_separator()
+        self.menu.add_command(label="开始计时", command=self.start_timer)
+        self.menu.add_command(label="查看计时", command=self.show_timers)
+        self.menu.add_command(label="清空计时", command=self.clear_timers)
+        self.menu.add_separator()
+        self.menu.add_command(label="退出熊", command=self.quit)
+
+        self.drag_start = None
+        self.did_drag = False
+        self.state_index = 0
+        self.frames = {}
+        self.frame_index = 0
+        self.after_id = None
+        self.reminder_after_ids = {}
+        self.reminders = []
+        self.last_bubble = None
+
+        self.asset_paths = self.resolve_assets()
+        self.load_state(0)
+        self.move_to_bottom_right()
+        self.bind_events()
+        self.schedule_saved_reminders()
+        self.root.after(16000, self.auto_next_state)
+
+    def apply_window_icon(self):
+        if not ICON_PATH.exists():
+            return
+        try:
+            self.root.iconbitmap(default=str(ICON_PATH))
+        except tk.TclError:
+            try:
+                self.root.iconbitmap(str(ICON_PATH))
+            except tk.TclError:
+                pass
+
+    def resolve_assets(self):
+        gifs = sorted(list(ASSET_DIR.glob("*.gif")) + list(ASSET_DIR.glob("*.GIF")))
+        if not gifs:
+            messagebox.showerror("熊的 GIF 不见了", "请把自己的 .gif 放进 assets 文件夹。")
+            raise SystemExit(1)
+        paths = {}
+        for i, state in enumerate(STATES):
+            named = ASSET_DIR / f"jokebear_{state}.gif"
+            named_upper = ASSET_DIR / f"jokebear_{state}.GIF"
+            if named.exists():
+                paths[state] = named
+            elif named_upper.exists():
+                paths[state] = named_upper
+            elif i < len(gifs):
+                paths[state] = gifs[i]
+            else:
+                paths[state] = gifs[0]
+        return paths
+
+    def bind_events(self):
+        self.label.bind("<ButtonPress-1>", self.start_drag)
+        self.label.bind("<B1-Motion>", self.drag)
+        self.label.bind("<ButtonRelease-1>", self.end_drag)
+        self.label.bind("<Button-3>", self.show_menu)
+        self.root.bind("<Escape>", lambda _event: self.quit())
+        self.root.bind("<Control-q>", lambda _event: self.quit())
+        self.root.bind("<Control-t>", lambda _event: self.start_chat())
+        self.root.bind("<Control-n>", lambda _event: self.next_state())
+        self.root.bind("<Control-m>", lambda _event: self.move_to_bottom_right())
+        self.root.bind("<Control-r>", lambda _event: self.remember_preference())
+        self.root.bind("<Control-p>", lambda _event: self.set_personality())
+        self.root.bind("<Control-l>", lambda _event: self.show_memory())
+        self.root.bind("<Control-i>", lambda _event: self.start_timer())
+
+    def load_gif_frames(self, path):
+        cache_key = str(path)
+        if cache_key in self.frames:
+            return self.frames[cache_key]
+
+        raw_frames = []
+        index = 0
+        while True:
+            try:
+                raw_frames.append(tk.PhotoImage(file=str(path), format=f"gif -index {index}"))
+                index += 1
+            except tk.TclError:
+                break
+
+        if not raw_frames:
+            raise RuntimeError(f"Cannot load GIF: {path}")
+
+        first = raw_frames[0]
+        factor = max(1, int(max(first.width(), first.height()) / MAX_SIDE + 0.999))
+        frames = [frame.subsample(factor, factor) for frame in raw_frames]
+        self.frames[cache_key] = frames
+        return frames
+
+    def load_state(self, index):
+        self.state_index = index % len(STATES)
+        state = STATES[self.state_index]
+        self.current_frames = self.load_gif_frames(self.asset_paths[state])
+        self.frame_index = 0
+        if self.after_id:
+            self.root.after_cancel(self.after_id)
+        self.animate()
+
+    def animate(self):
+        frame = self.current_frames[self.frame_index % len(self.current_frames)]
+        self.label.configure(image=frame)
+        self.label.image = frame
+        self.root.geometry(f"{frame.width()}x{frame.height()}")
+        self.frame_index += 1
+        self.after_id = self.root.after(90, self.animate)
+
+    def next_state(self):
+        self.load_state(self.state_index + 1)
+
+    def auto_next_state(self):
+        self.next_state()
+        self.root.after(16000, self.auto_next_state)
+
+    def move_to_bottom_right(self):
+        self.root.update_idletasks()
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        self.root.geometry(f"+{screen_w - width - 32}+{screen_h - height - 80}")
+
+    def start_drag(self, event):
+        self.root.lift()
+        self.drag_start = (event.x_root, event.y_root, self.root.winfo_x(), self.root.winfo_y())
+        self.did_drag = False
+
+    def drag(self, event):
+        if not self.drag_start:
+            return
+        start_x, start_y, win_x, win_y = self.drag_start
+        dx = event.x_root - start_x
+        dy = event.y_root - start_y
+        if abs(dx) + abs(dy) > 4:
+            self.did_drag = True
+        self.root.geometry(f"+{win_x + dx}+{win_y + dy}")
+
+    def end_drag(self, _event):
+        if not self.did_drag:
+            self.start_chat()
+        self.drag_start = None
+
+    def show_menu(self, event):
+        self.menu.tk_popup(event.x_root, event.y_root)
+
+    def start_chat(self):
+        question = simpledialog.askstring("熊", "你好你好，有什么可以帮您", parent=self.root)
+        if not question or not question.strip():
+            return
+        key = self.ensure_api_key()
+        if not key:
+            return
+        self.load_state(STATES.index("eat"))
+        threading.Thread(target=self.ask_deepseek, args=(key, question.strip(), False), daemon=True).start()
+
+    def ensure_api_key(self):
+        key = os.getenv("DEEPSEEK_API_KEY") or self.read_config().get("api_key", "")
+        if key:
+            return key
+        key = simpledialog.askstring("DeepSeek API Key", "第一次聊天需要输入 key。", show="*", parent=self.root)
+        if key:
+            config = self.read_config()
+            config["api_key"] = key
+            self.write_config(config)
+        return key
+
+    def read_config(self):
+        if CONFIG_FILE.exists():
+            try:
+                return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                return {}
+        return {}
+
+    def write_config(self, config):
+        APP_DIR.mkdir(parents=True, exist_ok=True)
+        CONFIG_FILE.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def system_prompt_with_memory(self):
+        parts = [SYSTEM_PROMPT]
+        personality = self.store.data.get("personality", "").strip()
+        memories = self.store.data.get("memories", [])[-20:]
+        if personality:
+            parts.append(f"用户自定义熊性格：\n{personality}")
+        if memories:
+            parts.append("用户偏好记忆：\n" + "\n".join(f"- {item}" for item in memories))
+        parts.append("自定义性格优先于默认性格，但必须保留名字叫熊、第一句固定问候、回答简短这几条底线。")
+        return "\n\n".join(parts)
+
+    def ask_deepseek(self, api_key, question, bubble):
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": self.system_prompt_with_memory()},
+                {"role": "user", "content": question},
+            ],
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = request.Request(
+            DEEPSEEK_URL,
+            data=data,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=30) as response:
+                result = json.loads(response.read().decode("utf-8"))
+            answer = result["choices"][0]["message"]["content"]
+            self.root.after(0, lambda: self.finish_answer(answer, bubble))
+        except error.HTTPError as exc:
+            text = exc.read().decode("utf-8", errors="ignore")
+            self.root.after(0, lambda: messagebox.showerror("熊说不出来", text))
+        except Exception as exc:
+            self.root.after(0, lambda: messagebox.showerror("熊说不出来", str(exc)))
+
+    def finish_answer(self, answer, bubble):
+        self.load_state(0)
+        if bubble:
+            self.show_bubble(answer)
+        else:
+            messagebox.showinfo("熊说：", answer)
+
+    def remember_preference(self):
+        text = simpledialog.askstring("熊记一下", "写一条你的偏好或要求。", parent=self.root)
+        if text and text.strip():
+            self.store.add_memory(text.strip())
+            self.show_bubble("你好你好，有什么可以帮您。记住了，熊的小本本+1。")
+
+    def show_memory(self):
+        memories = self.store.data.get("memories", [])
+        if not memories:
+            messagebox.showinfo("熊的记忆", "还没有记忆。熊脑袋空空，但很轻。")
+            return
+        messagebox.showinfo("熊的记忆", "\n".join(f"{i + 1}. {item}" for i, item in enumerate(memories)))
+
+    def clear_memory(self):
+        if messagebox.askyesno("清空记忆？", "熊会忘掉已记录的偏好。"):
+            self.store.clear_memories()
+            self.show_bubble("你好你好，有什么可以帮您。记忆清空了，熊重新开机。")
+
+    def set_personality(self):
+        current = self.store.data.get("personality", "").strip()
+        prompt = "写一段熊的人设/语气。比如：懒懒的，一针见血，但不要刻薄。"
+        if current:
+            prompt = f"当前性格：{current}\n\n写新的性格；留空就不改。"
+        text = simpledialog.askstring("熊的性格", prompt, parent=self.root)
+        if text and text.strip():
+            self.store.set_personality(text.strip())
+            self.show_bubble("你好你好，有什么可以帮您。性格改好了，熊会照着演。")
+
+    def show_personality(self):
+        personality = self.store.data.get("personality", "").strip()
+        messagebox.showinfo("熊的性格", personality or "还没有自定义性格。熊先按默认懒懒版本活着。")
+
+    def clear_personality(self):
+        if messagebox.askyesno("清空性格？", "熊会回到默认懒懒版本。"):
+            self.store.clear_personality()
+            self.show_bubble("你好你好，有什么可以帮您。性格清空了，熊回默认档。")
+
+    def start_timer(self):
+        title = simpledialog.askstring("熊计时", "要提醒什么？比如：喝水、休息、看锅。", parent=self.root)
+        if not title or not title.strip():
+            return
+        minutes_text = simpledialog.askstring("熊计时", "几分钟后提醒？只填数字，比如 25。", parent=self.root)
+        try:
+            minutes = float((minutes_text or "").strip().replace("，", "."))
+            if minutes <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("熊没看懂", "分钟数填数字就好。比如 10 或 25。")
+            return
+        reminder = {"id": str(time.time()), "title": title.strip(), "fire_at": time.time() + minutes * 60}
+        self.reminders.append(reminder)
+        self.schedule_timer(reminder)
+        self.show_bubble(f"你好你好，有什么可以帮您。好，{minutes:g} 分钟后叫你。")
+
+    def schedule_saved_reminders(self):
+        self.reminders = self.store.data.get("reminders", [])
+        for reminder in list(self.reminders):
+            if reminder.get("fire_at", 0) <= time.time():
+                self.fire_timer(reminder)
+            else:
+                self.schedule_timer(reminder)
+
+    def schedule_timer(self, reminder):
+        self.store.data["reminders"] = self.reminders
+        self.store.save()
+        ms = max(100, int((reminder["fire_at"] - time.time()) * 1000))
+        self.reminder_after_ids[reminder["id"]] = self.root.after(ms, lambda: self.fire_timer(reminder))
+
+    def fire_timer(self, reminder):
+        rid = reminder.get("id")
+        if rid in self.reminder_after_ids:
+            self.root.after_cancel(self.reminder_after_ids.pop(rid))
+        self.reminders = [item for item in self.reminders if item.get("id") != rid]
+        self.store.data["reminders"] = self.reminders
+        self.store.save()
+        self.load_state(STATES.index("wave"))
+        messagebox.showinfo("熊提醒你", f"你好你好，有什么可以帮您。{reminder.get('title', '到点了')}，到点了。")
+
+    def show_timers(self):
+        active = [item for item in self.reminders if item.get("fire_at", 0) > time.time()]
+        if not active:
+            messagebox.showinfo("熊的计时", "现在没有计时。熊也没被安排。")
+            return
+        lines = []
+        for item in sorted(active, key=lambda value: value["fire_at"]):
+            minutes = max(1, int((item["fire_at"] - time.time() + 59) // 60))
+            lines.append(f"- {item['title']}：约 {minutes} 分钟后")
+        messagebox.showinfo("熊的计时", "\n".join(lines))
+
+    def clear_timers(self):
+        if not messagebox.askyesno("清空计时？", "熊会取消所有还没到点的提醒。"):
+            return
+        for after_id in self.reminder_after_ids.values():
+            self.root.after_cancel(after_id)
+        self.reminder_after_ids.clear()
+        self.reminders = []
+        self.store.data["reminders"] = []
+        self.store.save()
+        self.show_bubble("你好你好，有什么可以帮您。计时都撤了，熊继续躺。")
+
+    def show_bubble(self, text):
+        if self.last_bubble and self.last_bubble.winfo_exists():
+            self.last_bubble.destroy()
+        bubble = tk.Toplevel(self.root)
+        bubble.overrideredirect(True)
+        bubble.attributes("-topmost", True)
+        bubble.configure(bg="#111111")
+        label = tk.Label(bubble, text=text, bg="#111111", fg="white", padx=12, pady=8, wraplength=280, justify="left")
+        label.pack()
+        x = max(20, self.root.winfo_x() - 310)
+        y = max(20, self.root.winfo_y())
+        bubble.geometry(f"+{x}+{y}")
+        self.last_bubble = bubble
+        bubble.after(8000, bubble.destroy)
+
+    def quit(self):
+        self.store.data["reminders"] = self.reminders
+        self.store.save()
+        self.root.destroy()
+
+    def run(self):
+        self.root.mainloop()
+
+
+if __name__ == "__main__":
+    BearApp().run()
