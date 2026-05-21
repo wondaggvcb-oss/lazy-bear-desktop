@@ -18,8 +18,9 @@ TRANSPARENT_COLOR = "#00ff00"
 MAX_SIDE = 170
 
 SYSTEM_PROMPT = """你的名字叫熊，是一只懒懒的、可爱的桌面宠物。
-第一轮对话你会先问好。
-后续回答要一针见血，少废话，但语气软一点、可爱一点。
+用户打开聊天时，界面会先替你问好：“你好你好，有什么可以帮您。”
+你的回答不要机械重复这句问候，除非用户主动要求。
+回答要一针见血，少废话，但语气软一点、可爱一点。
 不要热血，不要油腻，不要长篇安慰；像刚睡醒但很聪明的小熊。
 可以偶尔带一点颜文字。"""
 
@@ -274,7 +275,7 @@ class BearApp:
             parts.append(f"用户自定义熊性格：\n{personality}")
         if memories:
             parts.append("用户偏好记忆：\n" + "\n".join(f"- {item}" for item in memories))
-        parts.append("自定义性格优先于默认性格，但必须保留名字叫熊、第一句固定问候、回答简短这几条底线。")
+        parts.append("自定义性格优先于默认性格，但必须保留名字叫熊、回答简短、不要机械重复问候这几条底线。")
         return "\n\n".join(parts)
 
     def ask_deepseek(self, api_key, question, bubble):
@@ -314,7 +315,7 @@ class BearApp:
         text = simpledialog.askstring("熊记一下", "写一条你的偏好或要求。", parent=self.root)
         if text and text.strip():
             self.store.add_memory(text.strip())
-            self.show_bubble("你好你好，有什么可以帮您。记住了，熊的小本本+1。")
+            self.show_bubble("记住了，熊的小本本+1。")
 
     def show_memory(self):
         memories = self.store.data.get("memories", [])
@@ -326,7 +327,7 @@ class BearApp:
     def clear_memory(self):
         if messagebox.askyesno("清空记忆？", "熊会忘掉已记录的偏好。"):
             self.store.clear_memories()
-            self.show_bubble("你好你好，有什么可以帮您。记忆清空了，熊重新开机。")
+            self.show_bubble("记忆清空了，熊重新开机。")
 
     def set_personality(self):
         current = self.store.data.get("personality", "").strip()
@@ -336,7 +337,7 @@ class BearApp:
         text = simpledialog.askstring("熊的性格", prompt, parent=self.root)
         if text and text.strip():
             self.store.set_personality(text.strip())
-            self.show_bubble("你好你好，有什么可以帮您。性格改好了，熊会照着演。")
+            self.show_bubble("性格改好了，熊会照着演。")
 
     def show_personality(self):
         personality = self.store.data.get("personality", "").strip()
@@ -345,7 +346,7 @@ class BearApp:
     def clear_personality(self):
         if messagebox.askyesno("清空性格？", "熊会回到默认懒懒版本。"):
             self.store.clear_personality()
-            self.show_bubble("你好你好，有什么可以帮您。性格清空了，熊回默认档。")
+            self.show_bubble("性格清空了，熊回默认档。")
 
     def start_timer(self):
         title = simpledialog.askstring("熊计时", "要提醒什么？比如：喝水、休息、看锅。", parent=self.root)
@@ -362,7 +363,7 @@ class BearApp:
         reminder = {"id": str(time.time()), "title": title.strip(), "fire_at": time.time() + minutes * 60}
         self.reminders.append(reminder)
         self.schedule_timer(reminder)
-        self.show_bubble(f"你好你好，有什么可以帮您。好，{minutes:g} 分钟后叫你。")
+        self.show_bubble(f"好，{minutes:g} 分钟后叫你。")
 
     def schedule_saved_reminders(self):
         self.reminders = self.store.data.get("reminders", [])
@@ -386,7 +387,7 @@ class BearApp:
         self.store.data["reminders"] = self.reminders
         self.store.save()
         self.load_state(STATES.index("wave"))
-        messagebox.showinfo("熊提醒你", f"你好你好，有什么可以帮您。{reminder.get('title', '到点了')}，到点了。")
+        messagebox.showinfo("熊提醒你", f"{reminder.get('title', '到点了')}，到点了。")
 
     def show_timers(self):
         active = [item for item in self.reminders if item.get("fire_at", 0) > time.time()]
@@ -408,7 +409,7 @@ class BearApp:
         self.reminders = []
         self.store.data["reminders"] = []
         self.store.save()
-        self.show_bubble("你好你好，有什么可以帮您。计时都撤了，熊继续躺。")
+        self.show_bubble("计时都撤了，熊继续躺。")
 
     def show_bubble(self, text):
         if self.last_bubble and self.last_bubble.winfo_exists():
