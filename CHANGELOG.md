@@ -12,3 +12,4 @@
 - Windows 版支持读取本地图标 `Resources/BearIcon.ico`，测试包可生成桌面快捷方式。
 - macOS 构建时如果没有自定义 `.icns`，会自动从熊 GIF 生成 app 图标。
 - 根目录 README 改成 macOS / Windows 双版本总入口。
+- 调整熊的问候逻辑：只在打开聊天时先问好，后续回复和提醒不再每次重复固定开场白。
