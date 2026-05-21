@@ -1,74 +1,136 @@
-# 熊
+# 熊 / lazy-bear-desktop
 
-一个桌面宠物。GitHub 仓库叫 `lazy-bear-desktop`，生成出来的应用叫 **熊** ，人可以自己给熊改名字。
+一个桌面宠物项目。GitHub 仓库叫 `lazy-bear-desktop`，应用默认叫 **熊**。
 
-熊会飘在桌面上，可以聊天、换姿势、移动到角落，也可以记住用户偏好、做简单计时。你手动开启后，它还可以看屏幕文字，然后主动说一句短话。
+熊会飘在桌面上，可以聊天、换姿势、移动到角落，也可以记住用户偏好、设置自己的性格、做简单计时。macOS 版还可以在你手动开启后读取屏幕文字，然后主动说一句短话。
+
+这个仓库分成两个版本：
+
+- [macOS 版](macos/README.md)
+- [Windows 版](windows/README.md)
+
+仓库默认不自带熊图。使用前，把自己的 GIF 放到对应系统的 `assets/` 文件夹里即可。
 
 ## 快速领养熊
 
-先把自己的熊 GIF 放进 `assets/` 文件夹：
+### macOS
 
 ```bash
+cd macos
 mkdir -p assets
 cp ~/Downloads/your-bear.gif assets/
-```
-
-然后构建：
-
-```bash
 ./build.sh
-```
-
-打开熊：
-
-```bash
 open dist/熊.app
 ```
 
-如果 `assets/` 里只有一个 GIF，熊的所有姿势都会用这一个 GIF。
-
-## 多个姿势
-
-想让熊有不同状态，可以把 GIF 按下面这些名字放进 `assets/`：
+macOS 版会生成：
 
 ```text
-assets/jokebear_idle.gif
-assets/jokebear_eat.gif
-assets/jokebear_love.gif
-assets/jokebear_car.gif
-assets/jokebear_kiss.gif
-assets/jokebear_lie.gif
-assets/jokebear_wave.gif
+macos/dist/熊.app
 ```
 
-不需要全部都有。缺少的状态会自动复用已有 GIF。
+如果没有单独准备图标，构建时会自动从 GIF 抽第一帧生成 app 图标。
 
-## 桌面图标
+### Windows
 
-图标自己放。
+```powershell
+cd windows
+mkdir assets
+copy C:\Users\你的名字\Downloads\your-bear.gif assets\
+python bear_windows.py
+```
 
-如果你有 `.icns` 图标文件，把它放到：
+如果你的电脑用的是 Python 启动器，也可以：
+
+```powershell
+py bear_windows.py
+```
+
+Windows 版也可以放本地图标：
 
 ```text
-Resources/BearIcon.icns
+windows/Resources/BearIcon.ico
 ```
 
-没有图标也没关系，app 仍然叫 **熊**。
+## 环境要求
 
-## 需要什么
+### macOS
 
 - macOS
 - Xcode Command Line Tools
+- 聊天需要用户自己的 DeepSeek API Key
+- “看屏幕/停下”需要手动开启屏幕录制权限
 
-如果还没装过，可以运行：
+如果还没装过 Xcode Command Line Tools，可以运行：
 
 ```bash
 xcode-select --install
 ```
 
+### Windows
+
+- Windows 10 / 11
+- Python 3
+- 聊天需要用户自己的 DeepSeek API Key
+
+Windows 版暂时不做看屏幕 OCR，先保持简单可跑。
+
+## 多个姿势
+
+只放一个 GIF 也可以，熊的所有姿势都会用这一个 GIF。
+
+想让熊有不同状态，可以把 GIF 按下面这些名字放进对应系统的 `assets/`：
+
+```text
+jokebear_idle.gif
+jokebear_eat.gif
+jokebear_love.gif
+jokebear_car.gif
+jokebear_kiss.gif
+jokebear_lie.gif
+jokebear_wave.gif
+```
+
+不需要全部都有。缺少的状态会自动复用已有 GIF。
+
+## 图标
+
+### macOS
+
+默认不用额外准备图标。运行 `./build.sh` 时，如果没有 `Resources/BearIcon.icns`，脚本会自动从熊 GIF 生成 app 图标。
+
+如果你有自己的 `.icns` 图标，把它放到：
+
+```text
+macos/Resources/BearIcon.icns
+```
+
+### Windows
+
+Windows 图标是可选的。如果你有自己的 `.ico` 图标，把它放到：
+
+```text
+windows/Resources/BearIcon.ico
+```
+
+没有图标也能运行，只是快捷方式或窗口图标可能会使用默认样式。
+
+## 功能
+
+- 桌面悬浮熊
+- GIF 动图状态
+- 聊天
+- 记住用户偏好
+- 自定义熊的性格
+- 简单计时提醒
+- macOS 手动开启看屏幕
+
 ## 聊天
 
-第一次聊天时，熊会让你输入 DeepSeek API Key，并保存到系统钥匙串。
+第一次聊天时，熊会让你输入 DeepSeek API Key。
+
+- macOS 版会保存到系统钥匙串。
+- Windows 版会保存到本机用户数据目录。
 
 之后再打开熊，一般不需要重复输入。
 
@@ -84,9 +146,7 @@ xcode-select --install
 语气懒一点，不要太热血
 ```
 
-这些记忆会保存在本机 `Application Support` 里，之后聊天时熊会自动参考。
-
-也可以用菜单里的 **查看记忆**、**清空记忆** 管理它。
+之后聊天时，熊会参考这些记忆。也可以用 **查看记忆**、**清空记忆** 管理它。
 
 ## 自定义性格
 
@@ -104,55 +164,55 @@ xcode-select --install
 
 菜单里选择 **开始计时**，输入提醒内容和分钟数即可。
 
-到点后熊会弹出提醒。
-
-也可以用 **查看计时**、**清空计时** 管理还没到点的计时。
+到点后熊会弹出提醒。也可以用 **查看计时**、**清空计时** 管理还没到点的计时。
 
 ## 看屏幕
 
-“看屏幕/停下”默认关闭。
+这个功能目前只在 macOS 版里做了。
 
-只有你手动开启后，熊才会申请屏幕录制权限。开启后，它会隔一段时间读一次当前屏幕文字，然后主动说一句短话。
+“看屏幕/停下”默认关闭。只有你手动开启后，熊才会申请屏幕录制权限。开启后，它会隔一段时间读一次当前屏幕文字，然后主动说一句短话。
+
+不开权限也可以使用熊，只是不能读取屏幕内容。
 
 ## 快捷键
 
-- `⌘Q`：退出熊
-- `Esc`：退出熊
-- `⌘T`：聊天
-- `⌘N`：换姿势
-- `⌘M`：去右下角
-- `⌘S`：看屏幕 / 停下
-- `⌘R`：记住偏好
-- `⌘P`：设置性格
-- `⌘L`：查看记忆
-- `⌘I`：开始计时
+macOS 使用 `⌘`，Windows 使用 `Ctrl`。
 
-## 触控板
+- `Q`：退出熊
+- `T`：聊天
+- `N`：换姿势
+- `M`：去右下角
+- `R`：记住偏好
+- `P`：设置性格
+- `L`：查看记忆
+- `I`：开始计时
+
+macOS 版额外支持：
+
+- `⌘S`：看屏幕 / 停下
+
+## 鼠标 / 触控板
 
 - 点一下熊：聊天
 - 按住拖动：移动熊
-- 双指点熊：打开菜单
-
-## 生成位置
-
-构建完成后，应用会出现在：
-
-```text
-dist/熊.app
-```
-
-你可以把它拖到桌面、应用程序文件夹，或者直接在当前位置打开。
+- macOS 双指点熊：打开菜单
+- Windows 右键熊：打开菜单
 
 ## 常见问题
 
 ### 没有 GIF 怎么办？
 
-把自己的 `.gif` 放进 `assets/` 再运行 `./build.sh`。
+把自己的 `.gif` 放进对应系统的 `assets/` 再运行。
+
+```text
+macos/assets/
+windows/assets/
+```
 
 ### 没有图标怎么办？
 
-不用管。app 仍然叫 **熊**。
+macOS 不用管，会自动从 GIF 生成图标。Windows 可以不放图标，也可以自己放 `windows/Resources/BearIcon.ico`。
 
 ### 怎么退出？
 
-按 `⌘Q` 或 `Esc`。也可以双指点熊，选择“退出熊”。
+macOS 按 `⌘Q` 或 `Esc`。Windows 按 `Ctrl+Q` 或 `Esc`。也可以打开熊的菜单，选择“退出熊”。
