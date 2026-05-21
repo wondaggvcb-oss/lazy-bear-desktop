@@ -7,8 +7,9 @@ private let keychainService = "com.lazy-bear-desktop.deepseek"
 private let keychainAccount = NSUserName()
 private let systemPrompt = """
 你的名字叫熊，是一只懒懒的、可爱的桌面宠物。
-第一轮对话你会先问好。
-后续回答要一针见血，少废话，但语气软一点、可爱一点。
+用户打开聊天时，界面会先替你问好：“你好你好，有什么可以帮您。”
+你的回答不要机械重复这句问候，除非用户主动要求。
+回答要一针见血，少废话，但语气软一点、可爱一点。
 不要热血，不要油腻，不要长篇安慰；像刚睡醒但很聪明的小熊。
 可以偶尔带一点颜文字。
 """
@@ -487,7 +488,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         store.addMemory(trimmed)
-        showBubble("你好你好，有什么可以帮您。记住了，熊的小本本+1。")
+        showBubble("记住了，熊的小本本+1。")
     }
 
     private func setPersonality() {
@@ -504,7 +505,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         store.setPersonality(trimmed)
-        showBubble("你好你好，有什么可以帮您。性格改好了，熊会照着演。")
+        showBubble("性格改好了，熊会照着演。")
     }
 
     private func showPersonality() {
@@ -519,7 +520,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func confirmAndClearPersonality() {
         guard confirm(title: "清空性格？", text: "熊会回到默认懒懒版本。") else { return }
         store.clearPersonality()
-        showBubble("你好你好，有什么可以帮您。性格清空了，熊回默认档。")
+        showBubble("性格清空了，熊回默认档。")
     }
 
     private func showMemory() {
@@ -537,7 +538,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func confirmAndClearMemory() {
         guard confirm(title: "清空记忆？", text: "熊会忘掉已记录的偏好。") else { return }
         store.clearMemories()
-        showBubble("你好你好，有什么可以帮您。记忆清空了，熊重新开机。")
+        showBubble("记忆清空了，熊重新开机。")
     }
 
     private func startReminder() {
@@ -563,7 +564,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         )
         store.addReminder(reminder)
         scheduleReminder(reminder)
-        showBubble("你好你好，有什么可以帮您。好，\(friendlyMinutes(minutes))后叫你。")
+        showBubble("好，\(friendlyMinutes(minutes))后叫你。")
     }
 
     private func showTimers() {
@@ -589,7 +590,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         reminderTimers.values.forEach { $0.invalidate() }
         reminderTimers.removeAll()
         store.clearReminders()
-        showBubble("你好你好，有什么可以帮您。计时都撤了，熊继续躺。")
+        showBubble("计时都撤了，熊继续躺。")
     }
 
     private func scheduleStoredReminders() {
@@ -616,7 +617,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         reminderTimers[reminder.id] = nil
         store.removeReminder(id: reminder.id)
         showState(index: states.firstIndex(of: "wave") ?? stateIndex)
-        showAlert(title: "熊提醒你", text: "你好你好，有什么可以帮您。\(reminder.title)，到点了。")
+        showAlert(title: "熊提醒你", text: "\(reminder.title)，到点了。")
     }
 
     private func startWatchingScreen() {
@@ -628,7 +629,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
         isWatchingScreen = true
-        showBubble("你好你好，有什么可以帮您。开始瞄屏幕了，懒懒地两分钟看一眼。")
+        showBubble("开始瞄屏幕了，懒懒地两分钟看一眼。")
         proactiveScreenCheck()
         watchTimer?.invalidate()
         watchTimer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
@@ -667,7 +668,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let visibleText = screenText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !visibleText.isEmpty else {
                 self.isCommentingOnScreen = false
-                self.showBubble("你好你好，有什么可以帮您。屏幕太安静了，熊也继续躺。")
+                self.showBubble("屏幕太安静了，熊也继续躺。")
                 return
             }
             let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "未知程序"
@@ -678,7 +679,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             屏幕文字片段：
             \(excerpt)
 
-            请只用中文回复一句，必须以「你好你好，有什么可以帮您。」开头，总长度尽量不超过45字。语气懒懒的、可爱、一针见血。不要说“我看到你的屏幕”。
+            请只用中文回复一句，总长度尽量不超过45字。语气懒懒的、可爱、一针见血。不要以固定问候开头，不要说“我看到你的屏幕”。
             """
             self.askDeepSeekForBubble(apiKey: key, question: question)
         }
@@ -766,10 +767,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.isCommentingOnScreen = false
             self.showState(index: self.states.firstIndex(of: "idle") ?? 0)
             if let failure {
-                self.showBubble("你好你好，有什么可以帮您。刚刚说不出来：\(failure)")
+                self.showBubble("刚刚说不出来：\(failure)")
                 return
             }
-            self.showBubble(answer ?? "你好你好，有什么可以帮您。熊短暂离线。")
+            self.showBubble(answer ?? "熊短暂离线。")
         }
     }
 
@@ -835,7 +836,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         用户偏好记忆：
         \(memory)
 
-        自定义性格优先于默认性格，但必须保留名字叫熊、第一句固定问候、回答简短这几条底线。
+        自定义性格优先于默认性格，但必须保留名字叫熊、回答简短、不要机械重复问候这几条底线。
         回答时自然遵守这些偏好；不要逐条复述“我记得”。
         """
     }
