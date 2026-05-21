@@ -11,3 +11,4 @@
 - 补充环境要求：说明 macOS、Windows、AI 对话、屏幕权限和透明效果差异。
 - Windows 版支持读取本地图标 `Resources/BearIcon.ico`，测试包可生成桌面快捷方式。
 - macOS 构建时如果没有自定义 `.icns`，会自动从熊 GIF 生成 app 图标。
+- 根目录 README 改成 macOS / Windows 双版本总入口。
