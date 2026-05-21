@@ -1,0 +1,102 @@
+# Windows 版
+
+Windows 版是一个 Python/Tkinter 桌面熊。
+
+## 环境要求
+
+- 适合 Windows 10 / 11 用户。
+- 需要安装 Python 3。
+- 聊天需要用户自己的 DeepSeek API Key。
+- 熊图请自己放到 `windows/assets/`。
+- 图标可选，放到 `windows/Resources/BearIcon.ico`。
+- Windows 版暂时不做看屏幕 OCR。
+
+## 使用
+
+先进入 Windows 版本目录：
+
+```powershell
+cd windows
+```
+
+把自己的熊 GIF 放进 `windows/assets/`：
+
+```powershell
+mkdir assets
+copy C:\Users\你的名字\Downloads\your-bear.gif assets\
+```
+
+运行：
+
+```powershell
+python bear_windows.py
+```
+
+如果你的电脑用的是 Python 启动器，也可以：
+
+```powershell
+py bear_windows.py
+```
+
+也可以双击测试包里的 `start-bear.bat`。
+
+## 多个姿势
+
+可以把 GIF 按下面这些名字放进 `assets/`：
+
+```text
+jokebear_idle.gif
+jokebear_eat.gif
+jokebear_love.gif
+jokebear_car.gif
+jokebear_kiss.gif
+jokebear_lie.gif
+jokebear_wave.gif
+```
+
+只放一个 GIF 也可以，熊的所有状态都会用它。
+
+## 桌面图标
+
+如果你有 `.ico` 图标文件，把它放到：
+
+```text
+Resources/BearIcon.ico
+```
+
+测试包里如果带了 `create-desktop-shortcut.bat`，双击它可以在桌面生成一个带图标的 **熊** 快捷方式。
+
+## 功能
+
+- 聊天
+- 记住偏好
+- 自定义熊的性格
+- 简单计时
+- 右键菜单
+- 拖动移动
+
+Windows 版暂时不做看屏幕 OCR，先保持开箱简单。
+
+## 透明效果
+
+Windows 版会尽量把窗口背景做成透明。
+
+如果某些电脑上透明效果不完全一致，通常不是 GIF 放错了，而是 Windows 显示环境差异导致的。换一个透明背景 GIF 通常会更稳定。
+
+## 快捷键
+
+- `Ctrl+Q`：退出熊
+- `Esc`：退出熊
+- `Ctrl+T`：聊天
+- `Ctrl+N`：换姿势
+- `Ctrl+M`：去右下角
+- `Ctrl+R`：记住偏好
+- `Ctrl+P`：设置性格
+- `Ctrl+L`：查看记忆
+- `Ctrl+I`：开始计时
+
+## 鼠标 / 触控板
+
+- 点一下熊：聊天
+- 按住拖动：移动熊
+- 右键熊：打开菜单
