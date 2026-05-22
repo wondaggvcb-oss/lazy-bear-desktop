@@ -52,6 +52,47 @@ Windows 版也可以放本地图标：
 windows/Resources/BearIcon.ico
 ```
 
+## 更新旧版本
+
+如果你已经有旧版熊，不想重新折腾全部文件，可以只更新代码，自己的熊图和图标不用动。
+
+会用 Git 的用户，在仓库目录运行：
+
+```bash
+git pull
+```
+
+macOS 用户拉完后需要重新构建：
+
+```bash
+cd macos
+./build.sh
+open dist/熊.app
+```
+
+Windows 用户拉完后直接重新运行：
+
+```powershell
+cd windows
+python bear_windows.py
+```
+
+不会用 Git 的用户，可以最小替换这些文件：
+
+```text
+macOS：替换 macos/BearApp.swift 和 macos/build.sh，然后重新运行 ./build.sh
+Windows：替换 windows/bear_windows.py，然后重新运行 python bear_windows.py
+```
+
+不要删除自己的这些文件夹：
+
+```text
+macos/assets/
+macos/Resources/
+windows/assets/
+windows/Resources/
+```
+
 ## 环境要求
 
 ### macOS

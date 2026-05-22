@@ -32,6 +32,38 @@ cp ~/Downloads/your-bear.gif assets/
 open dist/熊.app
 ```
 
+## 更新旧版本
+
+如果你已经有旧版熊，最小更新只需要替换这两个文件：
+
+```text
+macos/BearApp.swift
+macos/build.sh
+```
+
+不要删除自己的素材：
+
+```text
+macos/assets/
+macos/Resources/
+```
+
+替换后重新构建：
+
+```bash
+cd macos
+./build.sh
+open dist/熊.app
+```
+
+如果你是用 Git 下载的，直接运行：
+
+```bash
+git pull
+cd macos
+./build.sh
+```
+
 ## 多个姿势
 
 把 GIF 放进 `assets/` 就行。熊会把 `assets/` 里所有 `.gif` 按文件名顺序读进来，然后循环播放。

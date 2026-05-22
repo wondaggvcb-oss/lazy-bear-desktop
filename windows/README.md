@@ -40,6 +40,36 @@ py bear_windows.py
 
 也可以双击测试包里的 `start-bear.bat`。
 
+## 更新旧版本
+
+如果你已经有旧版熊，最小更新只需要替换这个文件：
+
+```text
+windows/bear_windows.py
+```
+
+不要删除自己的素材：
+
+```text
+windows/assets/
+windows/Resources/
+```
+
+替换后重新运行：
+
+```powershell
+cd windows
+python bear_windows.py
+```
+
+如果你是用 Git 下载的，直接运行：
+
+```powershell
+git pull
+cd windows
+python bear_windows.py
+```
+
 ## 多个姿势
 
 把 GIF 放进 `assets/` 就行。熊会把 `assets/` 里所有 `.gif` 按文件名顺序读进来，然后循环播放。
