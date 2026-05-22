@@ -42,19 +42,19 @@ py bear_windows.py
 
 ## 多个姿势
 
-可以把 GIF 按下面这些名字放进 `assets/`：
+把 GIF 放进 `assets/` 就行。熊会把 `assets/` 里所有 `.gif` 按文件名顺序读进来，然后循环播放。
+
+只放一个 GIF 也可以；放多个 GIF 就会按顺序轮播。
+
+运行中新增或替换 GIF 后，下次“换姿势”或自动轮播时会重新读取。
+
+想控制轮播顺序，给文件名前面加编号最省事，比如：
 
 ```text
-jokebear_idle.gif
-jokebear_eat.gif
-jokebear_love.gif
-jokebear_car.gif
-jokebear_kiss.gif
-jokebear_lie.gif
-jokebear_wave.gif
+001_idle.gif
+002_eat.gif
+003_lie.gif
 ```
-
-只放一个 GIF 也可以，熊的所有状态都会用它。
 
 ## 桌面图标
 
@@ -76,6 +76,8 @@ Resources/BearIcon.ico
 - 拖动移动
 
 Windows 版暂时不做看屏幕 OCR，先保持开箱简单。
+
+打开聊天时，熊会先问一句“你好你好，有什么可以帮您”。后续回答不会每次重复这句固定问候。
 
 ## 透明效果
 

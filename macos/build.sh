@@ -12,8 +12,10 @@ ASSET_OUT="$RESOURCES/assets"
 
 mkdir -p "$ROOT/assets" "$ROOT/Resources"
 
-shopt -s nullglob
-gif_sources=("$ROOT"/assets/*.gif "$ROOT"/assets/*.GIF)
+gif_sources=()
+while IFS= read -r file; do
+  gif_sources+=("$file")
+done < <(find "$ROOT/assets" -maxdepth 1 -type f -iname "*.gif" -print | sort -f)
 
 if [ "${#gif_sources[@]}" -eq 0 ]; then
   echo "没有找到 GIF。请把自己的 .gif 放进 assets/ 文件夹后再运行。"
@@ -55,31 +57,20 @@ make_icon_from_gif() {
   iconutil -c icns "$iconset" -o "$RESOURCES/BearIcon.icns" >/dev/null
 }
 
-states=(idle eat love car kiss lie wave)
-for i in "${!states[@]}"; do
-  state="${states[$i]}"
-  named_lower="$ROOT/assets/jokebear_${state}.gif"
-  named_upper="$ROOT/assets/jokebear_${state}.GIF"
-  if [ -f "$named_lower" ]; then
-    src="$named_lower"
-  elif [ -f "$named_upper" ]; then
-    src="$named_upper"
-  elif [ "$i" -lt "${#gif_sources[@]}" ]; then
-    src="${gif_sources[$i]}"
-  else
-    src="${gif_sources[0]}"
-  fi
-  cp "$src" "$ASSET_OUT/jokebear_${state}.gif"
+for src in "${gif_sources[@]}"; do
+  cp "$src" "$ASSET_OUT/$(basename "$src")"
 done
 
 icon_block=""
+icon_source="${gif_sources[0]}"
+
 if [ -f "$ROOT/Resources/BearIcon.icns" ]; then
   cp "$ROOT/Resources/BearIcon.icns" "$RESOURCES/BearIcon.icns"
   echo "已使用 Resources/BearIcon.icns 作为 app 图标。"
   icon_block='
   <key>CFBundleIconFile</key>
   <string>BearIcon</string>'
-elif make_icon_from_gif "$ASSET_OUT/jokebear_idle.gif"; then
+elif make_icon_from_gif "$icon_source"; then
   echo "已用 GIF 自动生成 app 图标。"
   icon_block='
   <key>CFBundleIconFile</key>

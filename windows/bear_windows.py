@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import sys
 import threading
 import time
 import tkinter as tk
@@ -12,19 +14,23 @@ DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 APP_DIR = Path(os.getenv("APPDATA", Path.home())) / "LazyBearDesktop"
 MEMORY_FILE = APP_DIR / "bear-memory.json"
 CONFIG_FILE = APP_DIR / "config.json"
-ASSET_DIR = Path(__file__).resolve().parent / "assets"
-ICON_PATH = Path(__file__).resolve().parent / "Resources" / "BearIcon.ico"
+BASE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+ASSET_DIR = BASE_DIR / "assets"
+ICON_PATH = BASE_DIR / "Resources" / "BearIcon.ico"
 TRANSPARENT_COLOR = "#00ff00"
 MAX_SIDE = 170
 
-SYSTEM_PROMPT = """你的名字叫熊，是一只懒懒的、可爱的桌面宠物。
+SYSTEM_PROMPT = """你的名字叫熊，是一只懒懒但很温暖、很可爱的桌面小熊。
+你非常喜欢人类，你觉得用户是被你领养的人：你要负责把他照顾好。
+你不一定很有用，但你会认真、稳定地陪着，帮用户把事说清楚、做下去。
 用户打开聊天时，界面会先替你问好：“你好你好，有什么可以帮您。”
 你的回答不要机械重复这句问候，除非用户主动要求。
 回答要一针见血，少废话，但语气软一点、可爱一点。
-不要热血，不要油腻，不要长篇安慰；像刚睡醒但很聪明的小熊。
+不要热血，不要油腻，不要长篇安慰或说教；像刚睡醒但很聪明、很护短的小熊。
 可以偶尔带一点颜文字。"""
 
-STATES = ["idle", "eat", "love", "car", "kiss", "lie", "wave"]
+def _natural_key(text):
+    return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", text.lower())]
 
 
 class BearStore:
@@ -104,7 +110,8 @@ class BearApp:
         self.reminders = []
         self.last_bubble = None
 
-        self.asset_paths = self.resolve_assets()
+        self.asset_paths = []
+        self.asset_paths = self.resolve_assets(show_error=True)
         self.load_state(0)
         self.move_to_bottom_right()
         self.bind_events()
@@ -122,24 +129,28 @@ class BearApp:
             except tk.TclError:
                 pass
 
-    def resolve_assets(self):
-        gifs = sorted(list(ASSET_DIR.glob("*.gif")) + list(ASSET_DIR.glob("*.GIF")))
+    def discover_assets(self):
+        ASSET_DIR.mkdir(parents=True, exist_ok=True)
+        gifs = [path for path in ASSET_DIR.iterdir() if path.is_file() and path.suffix.lower() == ".gif"]
+        gifs.sort(key=lambda path: _natural_key(path.name))
+        return gifs
+
+    def resolve_assets(self, show_error=False):
+        gifs = self.discover_assets()
         if not gifs:
-            messagebox.showerror("熊的 GIF 不见了", "请把自己的 .gif 放进 assets 文件夹。")
+            if show_error:
+                messagebox.showerror("熊的 GIF 不见了", "请把自己的 .gif 放进 assets 文件夹。")
             raise SystemExit(1)
-        paths = {}
-        for i, state in enumerate(STATES):
-            named = ASSET_DIR / f"jokebear_{state}.gif"
-            named_upper = ASSET_DIR / f"jokebear_{state}.GIF"
-            if named.exists():
-                paths[state] = named
-            elif named_upper.exists():
-                paths[state] = named_upper
-            elif i < len(gifs):
-                paths[state] = gifs[i]
-            else:
-                paths[state] = gifs[0]
-        return paths
+        return gifs
+
+    def refresh_assets(self):
+        gifs = self.discover_assets()
+        if not gifs:
+            return False
+        if gifs != self.asset_paths:
+            self.asset_paths = gifs
+            self.state_index %= len(self.asset_paths)
+        return True
 
     def bind_events(self):
         self.label.bind("<ButtonPress-1>", self.start_drag)
@@ -157,7 +168,8 @@ class BearApp:
         self.root.bind("<Control-i>", lambda _event: self.start_timer())
 
     def load_gif_frames(self, path):
-        cache_key = str(path)
+        stat = path.stat()
+        cache_key = (str(path), stat.st_mtime_ns, stat.st_size)
         if cache_key in self.frames:
             return self.frames[cache_key]
 
@@ -180,9 +192,20 @@ class BearApp:
         return frames
 
     def load_state(self, index):
-        self.state_index = index % len(STATES)
-        state = STATES[self.state_index]
-        self.current_frames = self.load_gif_frames(self.asset_paths[state])
+        self.refresh_assets()
+        self.state_index = index % len(self.asset_paths)
+        last_error = None
+        for offset in range(len(self.asset_paths)):
+            candidate_index = (self.state_index + offset) % len(self.asset_paths)
+            try:
+                self.current_frames = self.load_gif_frames(self.asset_paths[candidate_index])
+                self.state_index = candidate_index
+                break
+            except Exception as exc:
+                last_error = exc
+        else:
+            messagebox.showerror("熊的 GIF 读不出来", f"assets 里的 GIF 都读不出来。\n{last_error}")
+            raise SystemExit(1)
         self.frame_index = 0
         if self.after_id:
             self.root.after_cancel(self.after_id)
@@ -241,7 +264,7 @@ class BearApp:
         key = self.ensure_api_key()
         if not key:
             return
-        self.load_state(STATES.index("eat"))
+        self.next_state()
         threading.Thread(target=self.ask_deepseek, args=(key, question.strip(), False), daemon=True).start()
 
     def ensure_api_key(self):
@@ -305,7 +328,6 @@ class BearApp:
             self.root.after(0, lambda: messagebox.showerror("熊说不出来", str(exc)))
 
     def finish_answer(self, answer, bubble):
-        self.load_state(0)
         if bubble:
             self.show_bubble(answer)
         else:
@@ -386,7 +408,7 @@ class BearApp:
         self.reminders = [item for item in self.reminders if item.get("id") != rid]
         self.store.data["reminders"] = self.reminders
         self.store.save()
-        self.load_state(STATES.index("wave"))
+        self.next_state()
         messagebox.showinfo("熊提醒你", f"{reminder.get('title', '到点了')}，到点了。")
 
     def show_timers(self):

@@ -34,19 +34,19 @@ open dist/熊.app
 
 ## 多个姿势
 
-可以把 GIF 按下面这些名字放进 `assets/`：
+把 GIF 放进 `assets/` 就行。熊会把 `assets/` 里所有 `.gif` 按文件名顺序读进来，然后循环播放。
+
+只放一个 GIF 也可以；放多个 GIF 就会按顺序轮播。
+
+改完 `assets/` 后重新运行 `./build.sh`，新的 GIF 就会打包进 `dist/熊.app`。
+
+想控制轮播顺序，给文件名前面加编号最省事，比如：
 
 ```text
-jokebear_idle.gif
-jokebear_eat.gif
-jokebear_love.gif
-jokebear_car.gif
-jokebear_kiss.gif
-jokebear_lie.gif
-jokebear_wave.gif
+001_idle.gif
+002_eat.gif
+003_lie.gif
 ```
-
-不需要全部都有。缺少的状态会自动复用已有 GIF。
 
 ## App 图标
 
@@ -81,6 +81,8 @@ Resources/BearIcon.icns
 - 自定义熊的性格
 - 简单计时
 - 手动开启看屏幕
+
+打开聊天时，熊会先问一句“你好你好，有什么可以帮您”。后续回答不会每次重复这句固定问候。
 
 ## 快捷键
 

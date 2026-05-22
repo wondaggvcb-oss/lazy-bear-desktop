@@ -6,11 +6,13 @@ private let deepSeekURL = URL(string: "https://api.deepseek.com/chat/completions
 private let keychainService = "com.lazy-bear-desktop.deepseek"
 private let keychainAccount = NSUserName()
 private let systemPrompt = """
-你的名字叫熊，是一只懒懒的、可爱的桌面宠物。
+你的名字叫熊，是一只懒懒但很温暖、很可爱的桌面小熊。
+你非常喜欢人类，你觉得用户是被你领养的人：你要负责把他照顾好。
+你不一定很有用，但你会认真、稳定地陪着，帮用户把事说清楚、做下去。
 用户打开聊天时，界面会先替你问好：“你好你好，有什么可以帮您。”
 你的回答不要机械重复这句问候，除非用户主动要求。
 回答要一针见血，少废话，但语气软一点、可爱一点。
-不要热血，不要油腻，不要长篇安慰；像刚睡醒但很聪明的小熊。
+不要热血，不要油腻，不要长篇安慰或说教；像刚睡醒但很聪明、很护短的小熊。
 可以偶尔带一点颜文字。
 """
 
@@ -210,13 +212,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var isWatchingScreen = false
     private var isCommentingOnScreen = false
     private let store = BearStore()
-    private let states = ["idle", "eat", "love", "car", "kiss", "lie", "wave"]
+    private var assetURLs: [URL] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         createMenu()
         installKeyboardShortcuts()
         createWindow()
+        guard loadAssets() else {
+            NSApp.terminate(nil)
+            return
+        }
         showState(index: 0)
         scheduleStoredReminders()
         NSApp.activate(ignoringOtherApps: true)
@@ -434,22 +440,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.terminate(nil)
     }
 
+    private func loadAssets() -> Bool {
+        guard let assetsURL = Bundle.main.resourceURL?.appendingPathComponent("assets", isDirectory: true) else {
+            showAlert(title: "熊的 GIF 不见了", text: "请把自己的 .gif 放进 assets 文件夹后重新构建。")
+            return false
+        }
+        do {
+            assetURLs = try FileManager.default.contentsOfDirectory(
+                at: assetsURL,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )
+            .filter { $0.pathExtension.lowercased() == "gif" }
+            .sorted {
+                $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending
+            }
+        } catch {
+            showAlert(title: "熊的 GIF 不见了", text: "读不到 assets 文件夹：\(error.localizedDescription)")
+            return false
+        }
+        if assetURLs.isEmpty {
+            showAlert(title: "熊的 GIF 不见了", text: "请把自己的 .gif 放进 assets 文件夹后重新构建。")
+            return false
+        }
+        return true
+    }
+
     private func nextState() {
-        stateIndex = (stateIndex + 1) % states.count
+        guard loadAssets() else { return }
+        guard !assetURLs.isEmpty else { return }
+        stateIndex = (stateIndex + 1) % assetURLs.count
         showState(index: stateIndex)
     }
 
     private func showState(index: Int) {
-        stateIndex = index
-        let name = "jokebear_\(states[index])"
-        guard let url = Bundle.main.url(forResource: name, withExtension: "gif", subdirectory: "assets"),
-              let image = NSImage(contentsOf: url) else {
-            showAlert(title: "熊的 GIF 不见了", text: "缺少素材：\(name).gif")
+        guard !assetURLs.isEmpty else {
+            showAlert(title: "熊的 GIF 不见了", text: "请把自己的 .gif 放进 assets 文件夹后重新构建。")
+            return
+        }
+        let startIndex = ((index % assetURLs.count) + assetURLs.count) % assetURLs.count
+        var loadedImage: NSImage?
+        var loadedIndex = startIndex
+        var failedName = ""
+        for offset in 0..<assetURLs.count {
+            let candidateIndex = (startIndex + offset) % assetURLs.count
+            let url = assetURLs[candidateIndex]
+            if let image = NSImage(contentsOf: url), image.size.width > 0, image.size.height > 0 {
+                loadedImage = image
+                loadedIndex = candidateIndex
+                break
+            }
+            failedName = url.lastPathComponent
+        }
+        guard let image = loadedImage else {
+            showAlert(title: "熊的 GIF 读不出来", text: "assets 里的 GIF 都读不出来。最后尝试的是：\(failedName)")
             return
         }
 
         imageView.image = image
         imageView.animates = true
+        stateIndex = loadedIndex
         let maxSide: CGFloat = 170
         let ratio = min(maxSide / image.size.width, maxSide / image.size.height, 1)
         let width = max(70, floor(image.size.width * ratio))
@@ -466,7 +516,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func startChat() {
-        showState(index: states.firstIndex(of: "love") ?? stateIndex)
+        nextState()
         guard let question = prompt(title: "熊", message: "你好你好，有什么可以帮您") else {
             return
         }
@@ -475,7 +525,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
         guard let key = ensureAPIKey() else {
-            showState(index: states.firstIndex(of: "idle") ?? 0)
+            showState(index: 0)
             return
         }
         askDeepSeek(apiKey: key, question: trimmed)
@@ -616,13 +666,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         reminderTimers[reminder.id]?.invalidate()
         reminderTimers[reminder.id] = nil
         store.removeReminder(id: reminder.id)
-        showState(index: states.firstIndex(of: "wave") ?? stateIndex)
+        nextState()
         showAlert(title: "熊提醒你", text: "\(reminder.title)，到点了。")
     }
 
     private func startWatchingScreen() {
         guard ensureAPIKey() != nil else {
-            showState(index: states.firstIndex(of: "idle") ?? 0)
+            showState(index: 0)
             return
         }
         guard ensureScreenCaptureAccess() else {
@@ -748,10 +798,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func askDeepSeek(apiKey: String, question: String) {
-        showState(index: states.firstIndex(of: "eat") ?? stateIndex)
+        nextState()
         sendDeepSeek(apiKey: apiKey, question: question) { [weak self] answer, failure in
             guard let self else { return }
-            self.showState(index: self.states.firstIndex(of: "idle") ?? 0)
             if let failure {
                 self.showAlert(title: "熊说不出来", text: failure)
                 return
@@ -761,11 +810,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func askDeepSeekForBubble(apiKey: String, question: String) {
-        showState(index: states.firstIndex(of: "wave") ?? stateIndex)
+        nextState()
         sendDeepSeek(apiKey: apiKey, question: question) { [weak self] answer, failure in
             guard let self else { return }
             self.isCommentingOnScreen = false
-            self.showState(index: self.states.firstIndex(of: "idle") ?? 0)
             if let failure {
                 self.showBubble("刚刚说不出来：\(failure)")
                 return
