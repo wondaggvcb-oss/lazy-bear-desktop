@@ -544,6 +544,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !trimmed.isEmpty else {
             return
         }
+        if isTimeQuestion(trimmed) {
+            showAlert(title: "熊说：", text: localTimeAnswer())
+            return
+        }
         guard let key = ensureAPIKey() else {
             showState(index: 0)
             return
@@ -906,8 +910,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func systemPromptWithMemory() -> String {
         let personality = store.data.personality.trimmingCharacters(in: .whitespacesAndNewlines)
+        let basePrompt = """
+        \(systemPrompt)
+
+        当前本机时间：
+        \(localDateTimeText())
+        如果用户询问时间、日期、星期或计时相关问题，必须以这个本机时间为准，不要猜测。
+        """
         guard !store.data.memories.isEmpty || !personality.isEmpty else {
-            return systemPrompt
+            return basePrompt
         }
         let memory: String
         if store.data.memories.isEmpty {
@@ -917,7 +928,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         let personalityText = personality.isEmpty ? "使用默认性格。" : personality
         return """
-        \(systemPrompt)
+        \(basePrompt)
 
         用户自定义熊性格：
         \(personalityText)
@@ -1018,6 +1029,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return "\(Int(minutes)) 分钟"
         }
         return String(format: "%.1f 分钟", minutes)
+    }
+
+    private func localDateTimeText() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy年M月d日 EEEE HH:mm:ss zzz"
+        return formatter.string(from: Date())
+    }
+
+    private func localTimeAnswer() -> String {
+        "现在是 \(localDateTimeText())。熊看的是你电脑时间，没瞎猜。"
+    }
+
+    private func isTimeQuestion(_ text: String) -> Bool {
+        let normalized = text
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "？", with: "?")
+        let patterns = [
+            "几点",
+            "几号",
+            "星期几",
+            "礼拜几",
+            "日期",
+            "现在时间",
+            "当前时间",
+            "当地时间",
+            "现在是几",
+            "今天几",
+            "今天星期",
+            "今天礼拜",
+            "today",
+            "date",
+            "time",
+            "whatday",
+            "whattime",
+        ]
+        return patterns.contains { normalized.contains($0) }
     }
 
     private func showAlert(title: String, text: String) {

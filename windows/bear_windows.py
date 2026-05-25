@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox, simpledialog
 from urllib import error, request
@@ -263,11 +264,16 @@ class BearApp:
         question = simpledialog.askstring("熊", "你好你好，有什么可以帮您", parent=self.root)
         if not question or not question.strip():
             return
+        question = question.strip()
+        if self.is_time_question(question):
+            self.next_state()
+            messagebox.showinfo("熊说：", self.local_time_answer())
+            return
         key = self.ensure_api_key()
         if not key:
             return
         self.next_state()
-        threading.Thread(target=self.ask_deepseek, args=(key, question.strip(), False), daemon=True).start()
+        threading.Thread(target=self.ask_deepseek, args=(key, question, False), daemon=True).start()
 
     def ensure_api_key(self):
         key = os.getenv("DEEPSEEK_API_KEY") or self.read_config().get("api_key", "")
@@ -292,8 +298,45 @@ class BearApp:
         APP_DIR.mkdir(parents=True, exist_ok=True)
         CONFIG_FILE.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    def local_datetime_text(self):
+        now = datetime.now().astimezone()
+        weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+        timezone_name = now.tzname() or ""
+        return f"{now.year}年{now.month}月{now.day}日 {weekdays[now.weekday()]} {now:%H:%M:%S} {timezone_name}".strip()
+
+    def local_time_answer(self):
+        return f"现在是 {self.local_datetime_text()}。熊看的是你电脑时间，没瞎猜。"
+
+    def is_time_question(self, text):
+        normalized = text.lower().replace(" ", "").replace("？", "?")
+        patterns = [
+            "几点",
+            "几号",
+            "星期几",
+            "礼拜几",
+            "日期",
+            "现在时间",
+            "当前时间",
+            "当地时间",
+            "现在是几",
+            "今天几",
+            "今天星期",
+            "今天礼拜",
+            "today",
+            "date",
+            "time",
+            "whatday",
+            "whattime",
+        ]
+        return any(pattern in normalized for pattern in patterns)
+
     def system_prompt_with_memory(self):
-        parts = [SYSTEM_PROMPT]
+        parts = [
+            SYSTEM_PROMPT,
+            "当前本机时间：\n"
+            f"{self.local_datetime_text()}\n"
+            "如果用户询问时间、日期、星期或计时相关问题，必须以这个本机时间为准，不要猜测。",
+        ]
         personality = self.store.data.get("personality", "").strip()
         memories = self.store.data.get("memories", [])[-20:]
         if personality:
