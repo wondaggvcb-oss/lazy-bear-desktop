@@ -32,7 +32,7 @@ cp ~/Downloads/your-bear.gif assets/
 open dist/熊.app
 ```
 
-## gifbug更新旧版本
+## 旧版本如何更新
 
 如果你已经有旧版熊，最小更新只需要替换这两个文件：
 

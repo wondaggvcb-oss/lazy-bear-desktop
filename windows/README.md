@@ -40,7 +40,7 @@ py bear_windows.py
 
 也可以双击测试包里的 `start-bear.bat`。
 
-## gifbug更新旧版本
+## 旧版本如何更新
 
 如果你已经有旧版熊，最小更新只需要替换这个文件：
 
