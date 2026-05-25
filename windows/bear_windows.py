@@ -106,6 +106,7 @@ class BearApp:
         self.frames = {}
         self.frame_index = 0
         self.after_id = None
+        self.timer_sweep_after_id = None
         self.reminder_after_ids = {}
         self.reminders = []
         self.last_bubble = None
@@ -116,6 +117,7 @@ class BearApp:
         self.move_to_bottom_right()
         self.bind_events()
         self.schedule_saved_reminders()
+        self.schedule_due_timer_check()
         self.root.after(16000, self.auto_next_state)
 
     def apply_window_icon(self):
@@ -401,8 +403,20 @@ class BearApp:
         ms = max(100, int((reminder["fire_at"] - time.time()) * 1000))
         self.reminder_after_ids[reminder["id"]] = self.root.after(ms, lambda: self.fire_timer(reminder))
 
+    def schedule_due_timer_check(self):
+        self.check_due_timers()
+        self.timer_sweep_after_id = self.root.after(5000, self.schedule_due_timer_check)
+
+    def check_due_timers(self):
+        now = time.time()
+        for reminder in list(self.reminders):
+            if reminder.get("fire_at", 0) <= now:
+                self.fire_timer(reminder)
+
     def fire_timer(self, reminder):
         rid = reminder.get("id")
+        if not any(item.get("id") == rid for item in self.reminders):
+            return
         if rid in self.reminder_after_ids:
             self.root.after_cancel(self.reminder_after_ids.pop(rid))
         self.reminders = [item for item in self.reminders if item.get("id") != rid]
@@ -451,6 +465,8 @@ class BearApp:
     def quit(self):
         self.store.data["reminders"] = self.reminders
         self.store.save()
+        if self.timer_sweep_after_id:
+            self.root.after_cancel(self.timer_sweep_after_id)
         self.root.destroy()
 
     def run(self):

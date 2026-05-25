@@ -206,6 +206,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var stateIndex = 0
     private var timer: Timer?
     private var watchTimer: Timer?
+    private var reminderSweepTimer: Timer?
     private var reminderTimers: [UUID: Timer] = [:]
     private var keyMonitor: Any?
     private var apiKey: String?
@@ -225,10 +226,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         showState(index: 0)
         scheduleStoredReminders()
+        startReminderSweep()
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(systemDidWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
         NSApp.activate(ignoringOtherApps: true)
-        timer = Timer.scheduledTimer(withTimeInterval: 16, repeats: true) { [weak self] _ in
+        let stateTimer = Timer(timeInterval: 16, repeats: true) { [weak self] _ in
             self?.nextState()
         }
+        timer = stateTimer
+        RunLoop.main.add(stateTimer, forMode: .common)
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        checkDueReminders()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -238,8 +252,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         timer?.invalidate()
         watchTimer?.invalidate()
+        reminderSweepTimer?.invalidate()
         reminderTimers.values.forEach { $0.invalidate() }
         reminderTimers.removeAll()
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
@@ -438,6 +454,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func quitAction() {
         NSApp.terminate(nil)
+    }
+
+    @objc private func systemDidWake(_ notification: Notification) {
+        checkDueReminders()
     }
 
     private func loadAssets() -> Bool {
@@ -654,12 +674,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    private func startReminderSweep() {
+        reminderSweepTimer?.invalidate()
+        let sweep = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+            self?.checkDueReminders()
+        }
+        reminderSweepTimer = sweep
+        RunLoop.main.add(sweep, forMode: .common)
+    }
+
+    private func checkDueReminders() {
+        let now = Date()
+        let dueReminders = store.data.reminders
+            .filter { $0.fireDate <= now }
+            .sorted { $0.fireDate < $1.fireDate }
+        for reminder in dueReminders {
+            fireReminder(reminder)
+        }
+    }
+
     private func scheduleReminder(_ reminder: BearReminder) {
         reminderTimers[reminder.id]?.invalidate()
         let interval = max(0.1, reminder.fireDate.timeIntervalSinceNow)
-        reminderTimers[reminder.id] = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+        let timer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
             self?.fireReminder(reminder)
         }
+        reminderTimers[reminder.id] = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     private func fireReminder(_ reminder: BearReminder) {
