@@ -1,5 +1,6 @@
 import Cocoa
 import ImageIO
+import ScreenCaptureKit
 import Vision
 
 private let deepSeekURL = URL(string: "https://api.deepseek.com/chat/completions")!
@@ -758,8 +759,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard isWatchingScreen, !isCommentingOnScreen else { return }
         guard let key = ensureAPIKey() else { return }
         isCommentingOnScreen = true
-        captureScreenText { [weak self] screenText in
+        captureScreenText { [weak self] screenText, failure in
             guard let self else { return }
+            if let failure {
+                self.isCommentingOnScreen = false
+                self.showBubble(failure)
+                return
+            }
             let visibleText = screenText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !visibleText.isEmpty else {
                 self.isCommentingOnScreen = false
@@ -780,36 +786,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    private func captureScreenText(completion: @escaping (String) -> Void) {
-        DispatchQueue.global(qos: .utility).async {
-            let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
-                .appendingPathComponent("jokebear-screen-\(UUID().uuidString).png")
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-            process.arguments = ["-x", tempURL.path]
-            do {
-                try process.run()
-                process.waitUntilExit()
-            } catch {
-                DispatchQueue.main.async { completion("") }
+    private func captureScreenText(completion: @escaping (String, String?) -> Void) {
+        guard CGPreflightScreenCaptureAccess() else {
+            completion("", "熊还没有屏幕录制权限。去系统设置里给熊权限，然后重开熊。")
+            return
+        }
+        captureScreenImage { [weak self] image, failure in
+            guard let self else { return }
+            guard let image else {
+                completion("", failure ?? "熊截不到屏幕。请退出熊，重新打开；如果还不行，把系统设置里的屏幕录制权限取消再重新勾上。")
                 return
             }
-            guard process.terminationStatus == 0,
-                  let source = CGImageSourceCreateWithURL(tempURL as CFURL, nil),
-                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-                try? FileManager.default.removeItem(at: tempURL)
-                DispatchQueue.main.async { completion("") }
-                return
-            }
-            try? FileManager.default.removeItem(at: tempURL)
+            self.recognizeScreenText(in: image, completion: completion)
+        }
+    }
 
+    private func captureScreenImage(completion: @escaping (CGImage?, String?) -> Void) {
+        SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { content, error in
+            if let error {
+                DispatchQueue.main.async {
+                    completion(nil, "熊找不到可截图的屏幕：\(error.localizedDescription)")
+                }
+                return
+            }
+            guard let display = content?.displays.first else {
+                DispatchQueue.main.async {
+                    completion(nil, "熊没找到可截图的显示器。")
+                }
+                return
+            }
+            let filter = SCContentFilter(display: display, excludingWindows: [])
+            let config = SCStreamConfiguration()
+            config.width = display.width
+            config.height = display.height
+            config.showsCursor = false
+            SCScreenshotManager.captureImage(contentFilter: filter, configuration: config) { image, error in
+                DispatchQueue.main.async {
+                    if let image {
+                        completion(image, nil)
+                    } else {
+                        completion(nil, "熊截不到屏幕：\(error?.localizedDescription ?? "未知原因")")
+                    }
+                }
+            }
+        }
+    }
+
+    private func recognizeScreenText(in image: CGImage, completion: @escaping (String, String?) -> Void) {
+        DispatchQueue.global(qos: .utility).async {
             let request = VNRecognizeTextRequest { request, _ in
                 let observations = request.results as? [VNRecognizedTextObservation] ?? []
                 let text = observations
                     .compactMap { $0.topCandidates(1).first?.string }
                     .joined(separator: "\n")
                 DispatchQueue.main.async {
-                    completion(text)
+                    completion(text, nil)
                 }
             }
             request.recognitionLevel = .fast
@@ -820,7 +851,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             do {
                 try handler.perform([request])
             } catch {
-                DispatchQueue.main.async { completion("") }
+                DispatchQueue.main.async {
+                    completion("", "熊截图成功了，但读屏幕文字失败：\(error.localizedDescription)")
+                }
             }
         }
     }

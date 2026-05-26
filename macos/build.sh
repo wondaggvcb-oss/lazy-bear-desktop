@@ -112,6 +112,7 @@ swiftc \
   -framework Cocoa \
   -framework Vision \
   -framework ImageIO \
+  -framework ScreenCaptureKit \
   "$ROOT/BearApp.swift" \
   -o "$MACOS/LazyBear"
 codesign --force --deep --sign - "$APP_DIR" >/dev/null
