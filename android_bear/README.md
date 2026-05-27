@@ -30,8 +30,9 @@ android_bear/
 ├── lib/
 │   ├── main.dart              # App 入口
 │   ├── pages/
-│   │   ├── home_page.dart     # 主页（开关、皮肤、提醒）
-│   │   └── settings_page.dart # 设置（轮换间隔）
+│   │   ├── home_page.dart     # 主页（开关、皮肤、提醒、聊天入口）
+│   │   ├── settings_page.dart # 设置（轮换间隔）
+│   │   └── chat_page.dart     # 聊天页面（DeepSeek API）
 │   ├── services/
 │   │   └── float_service.dart # MethodChannel Dart 封装
 │   ├── models/
@@ -173,6 +174,7 @@ flutter build apk
 - 切换皮肤
 - GIF 自动轮换
 - 每日提醒
+- 聊天（DeepSeek API，和 macOS/Windows 版一致）
 - 占位气泡（没有 GIF 时显示）
 
 ## 触控
@@ -193,6 +195,7 @@ startRotation(interval)       → 开始轮换（秒）
 stopRotation()                → 停止轮换
 setReminder(hour, minute)     → 设置每日提醒
 cancelReminder()              → 取消提醒
+chatWithBear(apiKey, question)→ 聊天（DeepSeek API）
 hasOverlayPermission()        → 检查悬浮窗权限
 requestOverlayPermission()    → 请求悬浮窗权限
 ```
