@@ -103,6 +103,8 @@ cat > "$CONTENTS/Info.plist" <<PLIST
   <false/>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>熊需要看屏幕才能主动和你互动，对屏幕内容做一针见血的可爱评论。</string>
 </dict>
 </plist>
 PLIST
@@ -115,6 +117,11 @@ swiftc \
   -framework ScreenCaptureKit \
   "$ROOT/BearApp.swift" \
   -o "$MACOS/LazyBear"
-codesign --force --deep --sign - "$APP_DIR" >/dev/null
-
-echo "已生成：$APP_DIR"
+ENTITLEMENTS="$ROOT/entitlements.plist"
+if [ -f "$ENTITLEMENTS" ]; then
+  codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_DIR" >/dev/null
+  echo "已签名（含 entitlements）：$APP_DIR"
+else
+  codesign --force --deep --sign - "$APP_DIR" >/dev/null
+  echo "已签名（无 entitlements）：$APP_DIR"
+fi
