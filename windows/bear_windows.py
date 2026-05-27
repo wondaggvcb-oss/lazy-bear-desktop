@@ -1,3 +1,5 @@
+import base64
+import ctypes
 import json
 import os
 import re
@@ -5,6 +7,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+from ctypes import wintypes
 from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox, simpledialog
@@ -20,6 +23,66 @@ ASSET_DIR = BASE_DIR / "assets"
 ICON_PATH = BASE_DIR / "Resources" / "BearIcon.ico"
 TRANSPARENT_COLOR = "#00ff00"
 MAX_SIDE = 170
+
+
+# ── Windows DPAPI 加密 ──────────────────────────────────────────
+# 用当前用户身份加密/解密，不需要额外 pip 包。
+# https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata
+
+class _DATA_BLOB(ctypes.Structure):
+    _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_ubyte))]
+
+
+_crypt32 = ctypes.windll.crypt32
+_crypt32.CryptProtectData.restype = wintypes.BOOL
+_crypt32.CryptUnprotectData.restype = wintypes.BOOL
+_kernel32 = ctypes.windll.kernel32
+_kernel32.LocalFree.restype = ctypes.c_void_p
+
+_CRYPTPROTECT_UI_FORBIDDEN = 0x1
+_CRYPTPROTECT_LOCAL_MACHINE = 0x4
+
+
+def _dpapi_encrypt(plain: bytes) -> bytes:
+    data_in = _DATA_BLOB(len(plain), ctypes.cast(
+        ctypes.create_string_buffer(plain, len(plain)), ctypes.POINTER(ctypes.c_ubyte)))
+    data_out = _DATA_BLOB()
+    ok = _crypt32.CryptProtectData(
+        ctypes.byref(data_in), None, None, None, None,
+        _CRYPTPROTECT_UI_FORBIDDEN | _CRYPTPROTECT_LOCAL_MACHINE,
+        ctypes.byref(data_out),
+    )
+    if not ok:
+        raise OSError("CryptProtectData failed")
+    raw = ctypes.string_at(data_out.pbData, data_out.cbData)
+    _kernel32.LocalFree(data_out.pbData)
+    return raw
+
+
+def _dpapi_decrypt(cipher: bytes) -> bytes:
+    data_in = _DATA_BLOB(len(cipher), ctypes.cast(
+        ctypes.create_string_buffer(cipher, len(cipher)), ctypes.POINTER(ctypes.c_ubyte)))
+    data_out = _DATA_BLOB()
+    desc = ctypes.c_void_p()
+    ok = _crypt32.CryptUnprotectData(
+        ctypes.byref(data_in), None, None, None, None,
+        _CRYPTPROTECT_UI_FORBIDDEN | _CRYPTPROTECT_LOCAL_MACHINE,
+        ctypes.byref(data_out),
+    )
+    if not ok:
+        raise OSError("CryptUnprotectData failed")
+    raw = ctypes.string_at(data_out.pbData, data_out.cbData)
+    _kernel32.LocalFree(data_out.pbData)
+    return raw
+
+
+def _dpapi_encrypt_str(plain: str) -> str:
+    return base64.b64encode(_dpapi_encrypt(plain.encode("utf-8"))).decode("ascii")
+
+
+def _dpapi_decrypt_str(encoded: str) -> str:
+    return _dpapi_decrypt(base64.b64decode(encoded.encode("ascii"))).decode("utf-8")
+
 
 SYSTEM_PROMPT = """你的名字叫熊，是一只懒懒但很温暖、很可爱的桌面小熊。
 你非常喜欢人类，你觉得用户是被你领养的人：你要负责把他照顾好。
@@ -276,27 +339,62 @@ class BearApp:
         threading.Thread(target=self.ask_deepseek, args=(key, question, False), daemon=True).start()
 
     def ensure_api_key(self):
-        key = os.getenv("DEEPSEEK_API_KEY") or self.read_config().get("api_key", "")
+        key = self._get_api_key()
         if key:
             return key
         key = simpledialog.askstring("DeepSeek API Key", "第一次聊天需要输入 key。可直接粘贴 (Ctrl+V)。", show="*", parent=self.root)
         if key:
             config = self.read_config()
-            config["api_key"] = key
+            config["api_key"] = key  # write_config 会自动加密
             self.write_config(config)
         return key
 
     def read_config(self):
-        if CONFIG_FILE.exists():
+        """读取 config，自动解密 api_key_enc / 迁移旧明文。"""
+        if not CONFIG_FILE.exists():
+            return {}
+        try:
+            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        # ── 迁移旧明文 api_key ──
+        if "api_key" in data and data["api_key"] and "api_key_enc" not in data:
             try:
-                return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+                data["api_key_enc"] = _dpapi_encrypt_str(data["api_key"])
+                del data["api_key"]
+                self.write_config_raw(data)
             except Exception:
-                return {}
-        return {}
+                pass
+        return data
 
     def write_config(self, config):
+        """保存 config，api_key 自动加密为 api_key_enc 后删除明文。"""
+        if "api_key" in config and config["api_key"]:
+            try:
+                config["api_key_enc"] = _dpapi_encrypt_str(config["api_key"])
+            except Exception:
+                config["api_key_enc"] = config["api_key"]
+            del config["api_key"]
+        self.write_config_raw(config)
+
+    def write_config_raw(self, data):
+        """不加密直接写入（仅 read_config 迁移用）。"""
         APP_DIR.mkdir(parents=True, exist_ok=True)
-        CONFIG_FILE.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
+        CONFIG_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _get_api_key(self):
+        """优先环境变量，其次加密 config。"""
+        env_key = os.getenv("DEEPSEEK_API_KEY")
+        if env_key:
+            return env_key
+        data = self.read_config()
+        enc = data.get("api_key_enc", "")
+        if not enc:
+            return ""
+        try:
+            return _dpapi_decrypt_str(enc)
+        except Exception:
+            return ""
 
     def local_datetime_text(self):
         now = datetime.now().astimezone()
