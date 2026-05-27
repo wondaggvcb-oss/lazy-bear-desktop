@@ -1,12 +1,14 @@
 import "dart:io";
 
 import "package:flutter/material.dart";
+import "package:path_provider/path_provider.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 import "../services/float_service.dart";
 import "../models/skin_model.dart";
 import "../widgets/skin_picker.dart";
 import "settings_page.dart";
+import "chat_page.dart";
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -75,8 +77,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<Directory> _getBaseDir() async {
-    // Use path_provider in real build
-    return Directory("${Platform.environment["HOME"] ?? "/data/data/com.example.bear"}/bear_data");
+    final appDir = await getApplicationDocumentsDirectory();
+    return Directory("${appDir.path}/bear_data");
   }
 
   Future<void> _toggleBear(bool value) async {
@@ -84,7 +86,6 @@ class _HomePageState extends State<HomePage> {
       final hasPermission = await FloatService.hasOverlayPermission();
       if (!hasPermission) {
         await FloatService.requestOverlayPermission();
-        // 用户可能刚授权，稍后再试
         final granted = await FloatService.hasOverlayPermission();
         if (!granted) {
           if (mounted) {
@@ -99,14 +100,13 @@ class _HomePageState extends State<HomePage> {
         }
       }
 
-      final ok = await FloatService.showBear();
-      if (ok && _skins.isNotEmpty && _currentSkinIndex < _skins.length) {
-        await FloatService.updateSkin(_skins[_currentSkinIndex].path);
-        if (_skins.length > 1 && _rotationInterval > 0) {
-          await FloatService.startRotation(_rotationInterval);
-        }
-      } else if (ok) {
-        await FloatService.showPlaceholder();
+      final paths = _skins.map((s) => s.path).toList();
+      final ok = await FloatService.showBear(
+        skinPaths: paths,
+        placeholder: _skins.isEmpty,
+      );
+      if (ok && _skins.isNotEmpty && _skins.length > 1 && _rotationInterval > 0) {
+        await FloatService.startRotation(_rotationInterval, skinPaths: paths);
       }
     } else {
       await FloatService.stopRotation();
@@ -119,8 +119,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _uploadGif() async {
-    // file_picker integration here
-    // For now placeholder — will be replaced with real implementation
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("选择 GIF 文件（file_picker 将在真机/模拟器上运行）")),
@@ -166,10 +164,15 @@ class _HomePageState extends State<HomePage> {
       await prefs.setInt("rotation_interval", result);
       setState(() => _rotationInterval = result);
       if (_bearEnabled && _skins.length > 1) {
+        final paths = _skins.map((s) => s.path).toList();
         await FloatService.stopRotation();
-        await FloatService.startRotation(result);
+        await FloatService.startRotation(result, skinPaths: paths);
       }
     }
+  }
+
+  void _openChat() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatPage()));
   }
 
   @override
@@ -178,6 +181,11 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("🐻 熊"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: _openChat,
+            tooltip: "和熊聊天",
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: _openSettings,

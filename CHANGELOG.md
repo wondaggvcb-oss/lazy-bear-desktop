@@ -23,8 +23,18 @@
 - 调整默认性格：熊更温暖可爱，更像一只觉得自己领养了人的小熊。
 - README 增加旧版本最小更新说明，提醒用户只替换代码文件并保留自己的 GIF 和图标。
 
-  ## 2026-05-26
-  
+## 2026-05-26
+
 - 改进计时提醒：macOS 和 Windows 都会定期检查已过点提醒，减少睡眠、卡顿或弹窗导致的延迟。
 - 修复询问当前时间时乱答的问题：熊会直接读取本机时间回答，并在普通聊天提示里带上当前时间。
 - 修复 macOS 看屏幕不稳定：改为熊本体直接截图做 OCR，并在失败时显示具体原因。
+
+## 2026-05-27
+
+- 新增 Android 版：Flutter + Kotlin 原生悬浮桌宠，支持 GIF 皮肤管理、轮换和每日提醒。
+- Android 版加入聊天功能：通过 DeepSeek API 和熊对话，API Key 保存在本地。
+- Android 版通过 MethodChannel + 本地广播实现 Flutter 与原生悬浮窗通信。
+- Android 版闹钟广播接收器添加 BOOT_COMPLETED 支持，重启后提醒不丢失。
+- 修复 Android 多个安全隐患：移除不必要的电池优化权限、修复线程安全问题、补齐 ProGuard 规则。
+- macOS 和 Windows 的 API Key 输入提示中补充了粘贴说明（⌘V / Ctrl+V）。
+- 根目录 README 更新为三版本总入口（macOS + Windows + Android）。

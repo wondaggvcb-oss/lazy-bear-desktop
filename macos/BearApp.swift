@@ -866,7 +866,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             apiKey = key
             return key
         }
-        guard let key = prompt(title: "DeepSeek API Key", message: "第一次聊天需要输入 key，熊会放进钥匙串。", secure: true),
+        guard let key = prompt(title: "DeepSeek API Key", message: "第一次聊天需要输入 key，熊会放进钥匙串。可直接粘贴 (⌘V)。", secure: true),
               !key.isEmpty else {
             return nil
         }

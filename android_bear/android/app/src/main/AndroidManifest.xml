@@ -16,7 +16,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- 忽略电池优化 -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- 网络请求（DeepSeek API 聊天） -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- 读写外部存储（用于文件选择器） -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -56,7 +58,11 @@
         <!-- 闹钟广播接收器 -->
         <receiver
             android:name=".ReminderReceiver"
-            android:exported="false" />
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <meta-data
             android:name="flutterEmbedding"

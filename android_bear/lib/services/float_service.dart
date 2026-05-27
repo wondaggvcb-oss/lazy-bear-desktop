@@ -4,8 +4,14 @@ class FloatService {
   static const _channel = MethodChannel("com.example.bear/float_service");
 
   /// 显示悬浮熊
-  static Future<bool> showBear() async {
-    final result = await _channel.invokeMethod<bool>("showBear");
+  static Future<bool> showBear({
+    List<String> skinPaths = const [],
+    bool placeholder = false,
+  }) async {
+    final result = await _channel.invokeMethod<bool>("showBear", {
+      "skinPaths": skinPaths,
+      "placeholder": placeholder,
+    });
     return result ?? false;
   }
 
@@ -25,8 +31,11 @@ class FloatService {
   }
 
   /// 开始轮换（interval 为秒）
-  static Future<void> startRotation(int intervalSeconds) async {
-    await _channel.invokeMethod("startRotation", {"interval": intervalSeconds});
+  static Future<void> startRotation(int intervalSeconds, {List<String> skinPaths = const []}) async {
+    await _channel.invokeMethod("startRotation", {
+      "interval": intervalSeconds,
+      "skinPaths": skinPaths,
+    });
   }
 
   /// 停止轮换
@@ -56,5 +65,25 @@ class FloatService {
   /// 请求悬浮窗权限（打开系统设置页面）
   static Future<void> requestOverlayPermission() async {
     await _channel.invokeMethod("requestOverlayPermission");
+  }
+
+  /// 与熊聊天（DeepSeek API）
+  static Future<String?> chatWithBear({
+    required String apiKey,
+    required String question,
+    String personality = "",
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<String>("chatWithBear", {
+        "apiKey": apiKey,
+        "question": question,
+        "personality": personality,
+      });
+      return result;
+    } on PlatformException catch (e) {
+      return "熊说不出来：${e.message}";
+    } catch (e) {
+      return "熊短暂离线：$e";
+    }
   }
 }

@@ -279,7 +279,7 @@ class BearApp:
         key = os.getenv("DEEPSEEK_API_KEY") or self.read_config().get("api_key", "")
         if key:
             return key
-        key = simpledialog.askstring("DeepSeek API Key", "第一次聊天需要输入 key。", show="*", parent=self.root)
+        key = simpledialog.askstring("DeepSeek API Key", "第一次聊天需要输入 key。可直接粘贴 (Ctrl+V)。", show="*", parent=self.root)
         if key:
             config = self.read_config()
             config["api_key"] = key

@@ -1,8 +1,10 @@
 package com.example.bear
 
 import android.app.*
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Build
@@ -30,17 +32,27 @@ class FloatService : Service() {
     private var rotationInterval = 10
     private var rotationHandler: Handler? = null
     private var rotationRunnable: Runnable? = null
+    private var broadcastReceiver: BroadcastReceiver? = null
 
     companion object {
+        @Volatile
         var isRunning = false
         const val CHANNEL_ID = "bear_float_channel"
         const val NOTIFICATION_ID = 1001
+
+        // Local broadcast actions
+        const val ACTION_SHOW_BEAR = "com.example.bear.ACTION_SHOW_BEAR"
+        const val ACTION_UPDATE_SKIN = "com.example.bear.ACTION_UPDATE_SKIN"
+        const val ACTION_SHOW_PLACEHOLDER = "com.example.bear.ACTION_SHOW_PLACEHOLDER"
+        const val ACTION_START_ROTATION = "com.example.bear.ACTION_START_ROTATION"
+        const val ACTION_STOP_ROTATION = "com.example.bear.ACTION_STOP_ROTATION"
     }
 
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
+        registerBroadcastReceiver()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -55,13 +67,59 @@ class FloatService : Service() {
         isRunning = false
         stopRotation()
         removeFloatView()
+        unregisterBroadcastReceiver()
         super.onDestroy()
+    }
+
+    private fun registerBroadcastReceiver() {
+        broadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                when (intent.action) {
+                    ACTION_SHOW_BEAR -> {
+                        val paths = intent.getStringArrayListExtra("skinPaths") ?: arrayListOf()
+                        val placeholder = intent.getBooleanExtra("placeholder", false)
+                        showBear(paths, placeholder)
+                    }
+                    ACTION_UPDATE_SKIN -> {
+                        val path = intent.getStringExtra("path") ?: return
+                        updateSkin(path)
+                    }
+                    ACTION_SHOW_PLACEHOLDER -> {
+                        showPlaceholderViewOnly()
+                    }
+                    ACTION_START_ROTATION -> {
+                        val interval = intent.getIntExtra("interval", 10)
+                        val paths = intent.getStringArrayListExtra("skinPaths") ?: arrayListOf()
+                        startRotation(interval, paths)
+                    }
+                    ACTION_STOP_ROTATION -> {
+                        stopRotation()
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(ACTION_SHOW_BEAR)
+            addAction(ACTION_UPDATE_SKIN)
+            addAction(ACTION_SHOW_PLACEHOLDER)
+            addAction(ACTION_START_ROTATION)
+            addAction(ACTION_STOP_ROTATION)
+        }
+        registerReceiver(broadcastReceiver, filter)
+    }
+
+    private fun unregisterBroadcastReceiver() {
+        broadcastReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (_: Exception) {}
+        }
     }
 
     // ──── 悬浮窗 ────
 
-    fun showBear(skinPaths: List<String>, placeholder: Boolean) {
-        this.skinPaths = skinPaths.toMutableList()
+    fun showBear(newSkinPaths: List<String>, placeholder: Boolean) {
+        this.skinPaths = newSkinPaths.toMutableList()
         removeFloatView()
 
         val params = WindowManager.LayoutParams(
@@ -84,8 +142,8 @@ class FloatService : Service() {
         }
 
         // 加载 GIF 或占位
-        if (skinPaths.isNotEmpty()) {
-            loadGif(skinPaths[0])
+        if (newSkinPaths.isNotEmpty()) {
+            loadGif(newSkinPaths[0])
         } else if (placeholder) {
             showPlaceholderView()
         }
@@ -98,7 +156,6 @@ class FloatService : Service() {
                 windowManager.updateViewLayout(floatView, params)
                 true
             } else if (event.action == MotionEvent.ACTION_UP) {
-                // 判定是否为点击（几乎没移动 = 点击）
                 view.performClick()
                 true
             } else {
@@ -107,11 +164,10 @@ class FloatService : Service() {
         }
 
         val clickListener = View.OnClickListener {
-            // 点击悬浮熊 → 打开主 App
-            val intent = packageManager.getLaunchIntentForPackage(packageName)
-            intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            if (intent != null) {
-                startActivity(intent)
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            if (launchIntent != null) {
+                startActivity(launchIntent)
             }
         }
 
@@ -137,7 +193,7 @@ class FloatService : Service() {
         }
     }
 
-    fun showPlaceholder() {
+    fun showPlaceholderViewOnly() {
         removeFloatView()
         showBear(emptyList(), placeholder = true)
     }
@@ -181,7 +237,6 @@ class FloatService : Service() {
 
     private fun showPlaceholderView() {
         bearImage?.let {
-            // 简单占位：后续可换成用 Canvas 画气泡
             it.setBackgroundColor(0x44_8B6914.toInt())
             it.alpha = 0.3f
         }
@@ -198,9 +253,9 @@ class FloatService : Service() {
     }
 
     private fun buildNotification(): Notification {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         val pending = PendingIntent.getActivity(
-            this, 0, intent,
+            this, 0, launchIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
