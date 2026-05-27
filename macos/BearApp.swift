@@ -221,11 +221,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         createMenu()
         installKeyboardShortcuts()
         createWindow()
-        guard loadAssets() else {
-            NSApp.terminate(nil)
-            return
+        _ = loadAssets()
+        if assetURLs.isEmpty {
+            showPlaceholderBear()
+        } else {
+            showState(index: 0)
         }
-        showState(index: 0)
         scheduleStoredReminders()
         startReminderSweep()
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -463,8 +464,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func loadAssets() -> Bool {
         guard let assetsURL = Bundle.main.resourceURL?.appendingPathComponent("assets", isDirectory: true) else {
-            showAlert(title: "熊的 GIF 不见了", text: "请把自己的 .gif 放进 assets 文件夹后重新构建。")
-            return false
+            assetURLs = []
+            return true
         }
         do {
             assetURLs = try FileManager.default.contentsOfDirectory(
@@ -477,18 +478,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending
             }
         } catch {
-            showAlert(title: "熊的 GIF 不见了", text: "读不到 assets 文件夹：\(error.localizedDescription)")
-            return false
-        }
-        if assetURLs.isEmpty {
-            showAlert(title: "熊的 GIF 不见了", text: "请把自己的 .gif 放进 assets 文件夹后重新构建。")
-            return false
+            assetURLs = []
         }
         return true
     }
 
     private func nextState() {
-        guard loadAssets() else { return }
+        _ = loadAssets()
         guard !assetURLs.isEmpty else { return }
         stateIndex = (stateIndex + 1) % assetURLs.count
         showState(index: stateIndex)
@@ -496,7 +492,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func showState(index: Int) {
         guard !assetURLs.isEmpty else {
-            showAlert(title: "熊的 GIF 不见了", text: "请把自己的 .gif 放进 assets 文件夹后重新构建。")
+            showPlaceholderBear()
             return
         }
         let startIndex = ((index % assetURLs.count) + assetURLs.count) % assetURLs.count
@@ -534,6 +530,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let margin: CGFloat = 24
         let frame = window.frame
         window.setFrameOrigin(NSPoint(x: screenFrame.maxX - frame.width - margin, y: screenFrame.minY + margin))
+    }
+
+    private func showPlaceholderBear() {
+        let size = NSSize(width: 170, height: 170)
+        window.setContentSize(size)
+        let view = NSView(frame: NSRect(origin: .zero, size: size))
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor(calibratedRed: 0.545, green: 0.412, blue: 0.078, alpha: 0.15).cgColor
+        view.layer?.cornerRadius = 20
+
+        let label = NSTextField(labelWithString: "🐻\n请把你的 GIF\n放进 assets 文件夹")
+        label.alignment = .center
+        label.font = NSFont.systemFont(ofSize: 14)
+        label.textColor = NSColor(calibratedRed: 0.545, green: 0.412, blue: 0.078, alpha: 1.0)
+        label.frame = NSRect(x: 10, y: 30, width: 150, height: 110)
+        view.addSubview(label)
+
+        imageView.image = nil
+        imageView.animates = false
+        window.contentView = view
+        moveToBottomRight()
+        window.makeKeyAndOrderFront(nil)
     }
 
     private func startChat() {

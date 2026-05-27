@@ -11,3 +11,6 @@
 
 # Bear 自身
 -keep class com.example.bear.** { *; }
+
+# Play Store deferred components — not used, suppress R8 warnings
+-dontwarn com.google.android.play.core.**

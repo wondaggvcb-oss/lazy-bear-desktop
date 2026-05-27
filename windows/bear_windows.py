@@ -162,6 +162,8 @@ class BearApp:
         self.menu.add_command(label="查看计时", command=self.show_timers)
         self.menu.add_command(label="清空计时", command=self.clear_timers)
         self.menu.add_separator()
+        self.menu.add_command(label="刷新 GIF", command=self.reload_all)
+        self.menu.add_separator()
         self.menu.add_command(label="退出熊", command=self.quit)
 
         self.drag_start = None
@@ -203,10 +205,8 @@ class BearApp:
 
     def resolve_assets(self, show_error=False):
         gifs = self.discover_assets()
-        if not gifs:
-            if show_error:
-                messagebox.showerror("熊的 GIF 不见了", "请把自己的 .gif 放进 assets 文件夹。")
-            raise SystemExit(1)
+        if not gifs and show_error:
+            messagebox.showinfo("熊还没有 GIF", "请把自己的 .gif 放进 assets 文件夹。\n放好后右键熊 → 刷新即可。")
         return gifs
 
     def refresh_assets(self):
@@ -259,6 +259,9 @@ class BearApp:
 
     def load_state(self, index):
         self.refresh_assets()
+        if not self.asset_paths:
+            self.show_empty_placeholder()
+            return
         self.state_index = index % len(self.asset_paths)
         last_error = None
         for offset in range(len(self.asset_paths)):
@@ -270,8 +273,8 @@ class BearApp:
             except Exception as exc:
                 last_error = exc
         else:
-            messagebox.showerror("熊的 GIF 读不出来", f"assets 里的 GIF 都读不出来。\n{last_error}")
-            raise SystemExit(1)
+            self.show_empty_placeholder()
+            return
         self.frame_index = 0
         if self.after_id:
             self.root.after_cancel(self.after_id)
@@ -285,8 +288,25 @@ class BearApp:
         self.frame_index += 1
         self.after_id = self.root.after(90, self.animate)
 
+    def show_empty_placeholder(self):
+        if self.after_id:
+            self.root.after_cancel(self.after_id)
+        self.root.geometry("170x170")
+        self.label.configure(image="", text="🐻\n请把 GIF\n放进 assets 文件夹", font=("Microsoft YaHei", 12), fg="#8B6914", bg=TRANSPARENT_COLOR, compound="center")
+        self.move_to_bottom_right()
+
+    def reload_all(self):
+        """重新扫描 assets 并刷新显示（用户放好 GIF 后使用）"""
+        self.frames.clear()
+        self.asset_paths = self.resolve_assets(show_error=True)
+        if self.asset_paths:
+            self.load_state(0)
+        else:
+            self.show_empty_placeholder()
+
     def next_state(self):
-        self.load_state(self.state_index + 1)
+        if self.asset_paths:
+            self.load_state(self.state_index + 1)
 
     def auto_next_state(self):
         self.next_state()

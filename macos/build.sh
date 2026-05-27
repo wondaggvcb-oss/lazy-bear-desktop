@@ -17,11 +17,6 @@ while IFS= read -r file; do
   gif_sources+=("$file")
 done < <(find "$ROOT/assets" -maxdepth 1 -type f -iname "*.gif" -print | sort -f)
 
-if [ "${#gif_sources[@]}" -eq 0 ]; then
-  echo "没有找到 GIF。请把自己的 .gif 放进 assets/ 文件夹后再运行。"
-  exit 1
-fi
-
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS" "$ASSET_OUT" "$ROOT/.build/module-cache"
 
@@ -57,12 +52,17 @@ make_icon_from_gif() {
   iconutil -c icns "$iconset" -o "$RESOURCES/BearIcon.icns" >/dev/null
 }
 
-for src in "${gif_sources[@]}"; do
-  cp "$src" "$ASSET_OUT/$(basename "$src")"
-done
+if [ "${#gif_sources[@]}" -gt 0 ]; then
+  for src in "${gif_sources[@]}"; do
+    cp "$src" "$ASSET_OUT/$(basename "$src")"
+  done
+  echo "已复制 ${#gif_sources[@]} 个 GIF 到 app 包。"
+else
+  echo "没有找到 GIF，app 将以占位模式启动。请把自己的 .gif 放进 assets/ 文件夹后重新构建。"
+fi
 
 icon_block=""
-icon_source="${gif_sources[0]}"
+icon_source="${gif_sources[0]:-}"
 
 if [ -f "$ROOT/Resources/BearIcon.icns" ]; then
   cp "$ROOT/Resources/BearIcon.icns" "$RESOURCES/BearIcon.icns"
@@ -70,7 +70,7 @@ if [ -f "$ROOT/Resources/BearIcon.icns" ]; then
   icon_block='
   <key>CFBundleIconFile</key>
   <string>BearIcon</string>'
-elif make_icon_from_gif "$icon_source"; then
+elif [ -n "$icon_source" ] && make_icon_from_gif "$icon_source"; then
   echo "已用 GIF 自动生成 app 图标。"
   icon_block='
   <key>CFBundleIconFile</key>

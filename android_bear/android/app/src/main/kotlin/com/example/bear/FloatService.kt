@@ -46,6 +46,21 @@ class FloatService : Service() {
         const val ACTION_SHOW_PLACEHOLDER = "com.example.bear.ACTION_SHOW_PLACEHOLDER"
         const val ACTION_START_ROTATION = "com.example.bear.ACTION_START_ROTATION"
         const val ACTION_STOP_ROTATION = "com.example.bear.ACTION_STOP_ROTATION"
+
+        fun hasOverlayPermission(context: Context): Boolean {
+            return Settings.canDrawOverlays(context)
+        }
+
+        fun requestOverlayPermission(context: Context) {
+            if (!hasOverlayPermission(context)) {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}")
+                )
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+        }
     }
 
     override fun onCreate() {
@@ -283,22 +298,5 @@ class FloatService : Service() {
         }
     }
 
-    // ──── 工具方法 ────
-
-    companion object {
-        fun hasOverlayPermission(context: Context): Boolean {
-            return Settings.canDrawOverlays(context)
-        }
-
-        fun requestOverlayPermission(context: Context) {
-            if (!hasOverlayPermission(context)) {
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:${context.packageName}")
-                )
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            }
-        }
-    }
+    // ──── 工具方法（已合并到上方 companion object） ────
 }
