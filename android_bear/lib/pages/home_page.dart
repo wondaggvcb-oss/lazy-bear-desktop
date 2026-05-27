@@ -179,7 +179,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("🐻 熊"),
+        title: const Text("熊"),
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),

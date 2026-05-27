@@ -26,10 +26,10 @@ class ReminderReceiver : BroadcastReceiver() {
         )
 
         val titles = listOf(
-            "🐻 到点啦，该休息一下哦～",
-            "🐻 熊提醒你喝水了",
-            "🐻 别太累了，站起来走走～",
-            "🐻 抬头看看窗外，熊在你好旁边",
+            "熊：到点啦，该休息一下哦～",
+            "熊：熊提醒你喝水了",
+            "熊：别太累了，站起来走走～",
+            "熊：抬头看看窗外，熊在你好旁边",
         )
         val title = titles.random()
 

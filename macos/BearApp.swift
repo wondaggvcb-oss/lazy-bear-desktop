@@ -540,7 +540,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         view.layer?.backgroundColor = NSColor(calibratedRed: 0.545, green: 0.412, blue: 0.078, alpha: 0.15).cgColor
         view.layer?.cornerRadius = 20
 
-        let label = NSTextField(labelWithString: "🐻\n请把你的 GIF\n放进 assets 文件夹")
+        let label = NSTextField(labelWithString: "熊\n请把你的 GIF\n放进 assets 文件夹")
         label.alignment = .center
         label.font = NSFont.systemFont(ofSize: 14)
         label.textColor = NSColor(calibratedRed: 0.545, green: 0.412, blue: 0.078, alpha: 1.0)
