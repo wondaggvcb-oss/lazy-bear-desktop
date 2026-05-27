@@ -136,9 +136,9 @@ flutter build apk
 提醒通过 Android AlarmManager + BroadcastReceiver 实现，Flutter 端通过 MethodChannel 调用 `setReminder(hour, minute)` 设置。
 
 通知文案是随机的小熊语气，比如：
-- 🐻 到点啦，该休息一下哦～
-- 🐻 熊提醒你喝水了
-- 🐻 别太累了，站起来走走～
+- 熊：到点啦，该休息一下哦～
+- 熊：熊提醒你喝水了
+- 熊：别太累了，站起来走走～
 
 点击通知会打开熊 App。
 

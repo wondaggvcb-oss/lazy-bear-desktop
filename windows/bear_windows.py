@@ -292,7 +292,7 @@ class BearApp:
         if self.after_id:
             self.root.after_cancel(self.after_id)
         self.root.geometry("170x170")
-        self.label.configure(image="", text="🐻\n请把 GIF\n放进 assets 文件夹", font=("Microsoft YaHei", 12), fg="#8B6914", bg=TRANSPARENT_COLOR, compound="center")
+        self.label.configure(image="", text="熊\n请把 GIF\n放进 assets 文件夹", font=("Microsoft YaHei", 12), fg="#8B6914", bg=TRANSPARENT_COLOR, compound="center")
         self.move_to_bottom_right()
 
     def reload_all(self):
