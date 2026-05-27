@@ -1,0 +1,9 @@
+.dart_tool/
+.packages
+.pub/
+build/
+*.apk
+*.aab
+*.keystore
+local.properties
+HANDOFF.md
