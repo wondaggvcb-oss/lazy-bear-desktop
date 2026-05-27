@@ -6,11 +6,9 @@
 
 ---
 
-## 📦 普通用户下载（不需要源码）
+## 📦 普通用户下载（开箱即用）
 
-👉 **[去 Releases 页面下载](https://github.com/entity-cc/lazy-bear-desktop/releases)**
-
-你会看到三个文件：
+👉 **[去 Releases 页面下载打包好的版本](https://github.com/wondaggvcb-oss/lazy-bear-desktop/releases)**
 
 | 文件 | 平台 | 怎么用 |
 |------|------|--------|
@@ -18,7 +16,7 @@
 | `LazyBear-Windows.zip` | Windows 10/11 | 解压后双击 `启动熊.bat`（包里含使用说明） |
 | `LazyBear-macOS.zip` | macOS | 解压后双击 `熊.app`（包里含使用说明） |
 
-> ⚠️ **不要直接 clone 源码**，源码需要命令行和开发工具才能跑。点上面链接下载打包好的版本。
+> 💡 如果你是开发者、想自己构建或看源码，往下翻到「💻 开发者看这里」。源码是公开的，所有代码都在这个仓库里。
 
 ---
 
