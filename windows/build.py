@@ -137,6 +137,52 @@ def main():
     exe_assets = dist_dir / "assets"
     exe_assets.mkdir(exist_ok=True)
     
+    # 创建 README 文件
+    readme_content = '''熊 / Lazy Bear Desktop - Windows 版
+================================
+
+一只会聊天、记事情、提醒你的懒懒小熊 🐻
+
+快速开始
+--------
+1. 双击 熊.exe 启动程序
+2. 将 .gif 动画文件放入 assets 文件夹
+3. 程序会自动检测并加载 GIF
+
+功能特性
+--------
+• 桌面悬浮熊 - 透明背景，可拖动
+• AI 聊天 - 基于 DeepSeek，会记住你的偏好
+• 记忆功能 - 记住你的习惯和喜好
+• 自定义性格 - 设置熊的说话风格
+• 计时提醒 - 简单的倒计时提醒
+• 多姿势切换 - 支持多个 GIF 自动轮播
+
+快捷键
+------
+Ctrl+T  聊天
+Ctrl+N  换姿势
+Ctrl+M  去右下角
+Ctrl+S  设置
+Ctrl+Q  退出
+
+鼠标操作
+--------
+单击    聊天
+拖动    移动位置
+右键    打开菜单
+
+首次聊天
+--------
+首次使用聊天功能时，需要输入 DeepSeek API Key。
+获取地址: https://platform.deepseek.com/
+Key 会被加密保存在本地，无需重复输入。
+
+版本: 1.1.0
+'''
+    (release_dir / "README.txt").write_text(readme_content, encoding='utf-8')
+    print("      已创建: README.txt")
+    
     # 清理临时文件
     print("      清理临时文件...")
     if (dist_dir / "熊.exe").exists():
