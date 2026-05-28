@@ -1,134 +1,100 @@
-# Windows 版
+# 熊 / Lazy Bear Desktop - Windows 版
 
-Windows 版是一个 Python/Tkinter 桌面熊。
+桌面宠物应用 - 一只会聊天、记事情、提醒你的懒懒小熊。
 
-## 环境要求
+## 快速开始
 
-- 适合 Windows 10 / 11 用户。
-- 需要安装 Python 3。
-- 聊天需要用户自己的 DeepSeek API Key。
-- 熊图请自己放到 `windows/assets/`。
-- 图标可选，放到 `windows/Resources/BearIcon.ico`。
-- Windows 版暂时不做看屏幕 OCR。
+### 方法一：直接运行（需要 Python）
 
-## 使用
+1. 确保已安装 Python 3.7+
+2. 把自己的 GIF 放入 `assets` 文件夹
+3. 双击 **`启动熊.vbs`**（推荐，无黑窗口）
+   
+   或者双击 `start.bat`（英文界面，避免编码问题）
 
-先进入 Windows 版本目录：
+**排查问题**: 
+- 如果双击后没有看到熊，请检查屏幕右下角
+- 双击 `start-debug.bat` 查看调试信息（英文，避免乱码）
 
-```powershell
-cd windows
+### 方法二：打包成可执行文件（推荐分发）
+
+```bash
+python build.py
 ```
 
-把自己的熊 GIF 放进 `windows/assets/`：
+打包完成后在 `dist/LazyBear-Windows.zip` 中找到可执行文件。
 
-```powershell
-mkdir assets
-copy C:\Users\你的名字\Downloads\your-bear.gif assets\
-```
+## 功能特性
 
-运行：
-
-```powershell
-python bear_windows.py
-```
-
-如果你的电脑用的是 Python 启动器，也可以：
-
-```powershell
-py bear_windows.py
-```
-
-也可以双击测试包里的 `start-bear.bat`。
-
-## 旧版本如何更新
-
-如果你已经有旧版熊，最小更新只需要替换这个文件：
-
-```text
-windows/bear_windows.py
-```
-
-不要删除自己的素材：
-
-```text
-windows/assets/
-windows/Resources/
-```
-
-替换后重新运行：
-
-```powershell
-cd windows
-python bear_windows.py
-```
-
-如果你是用 Git 下载的，直接运行：
-
-```powershell
-git pull
-cd windows
-python bear_windows.py
-```
-
-## 多个姿势
-
-把 GIF 放进 `assets/` 就行。熊会把 `assets/` 里所有 `.gif` 按文件名顺序读进来，然后循环播放。
-
-只放一个 GIF 也可以；放多个 GIF 就会按顺序轮播。
-
-运行中新增或替换 GIF 后，下次“换姿势”或自动轮播时会重新读取。
-
-想控制轮播顺序，给文件名前面加编号最省事，比如：
-
-```text
-001_idle.gif
-002_eat.gif
-003_lie.gif
-```
-
-## 桌面图标
-
-如果你有 `.ico` 图标文件，把它放到：
-
-```text
-Resources/BearIcon.ico
-```
-
-测试包里如果带了 `create-desktop-shortcut.bat`，双击它可以在桌面生成一个带图标的 **熊** 快捷方式。
-
-## 功能
-
-- 聊天
-- 记住偏好
-- 自定义熊的性格
-- 简单计时
-- 右键菜单
-- 拖动移动
-
-Windows 版暂时不做看屏幕 OCR，先保持开箱简单。
-
-打开聊天时，熊会先问一句“你好你好，有什么可以帮您”。后续回答不会每次重复这句固定问候。
-
-## 透明效果
-
-Windows 版会尽量把窗口背景做成透明。
-
-如果某些电脑上透明效果不完全一致，通常不是 GIF 放错了，而是 Windows 显示环境差异导致的。换一个透明背景 GIF 通常会更稳定。
+- 🐻 **桌面悬浮熊** - 透明背景，可拖动
+- 💬 **AI 聊天** - 基于 DeepSeek，会记住你的偏好
+- 📝 **记忆功能** - 记住你的习惯和喜好
+- 🎭 **自定义性格** - 设置熊的说话风格
+- ⏱️ **计时提醒** - 简单的倒计时提醒
+- ⚙️ **设置面板** - 控制 GIF 播放速度等
+- 🔄 **多姿势切换** - 支持多个 GIF 自动轮播
 
 ## 快捷键
 
-- `Ctrl+Q`：退出熊
-- `Esc`：退出熊
-- `Ctrl+T`：聊天
-- `Ctrl+N`：换姿势
-- `Ctrl+M`：去右下角
-- `Ctrl+R`：记住偏好
-- `Ctrl+P`：设置性格
-- `Ctrl+L`：查看记忆
-- `Ctrl+I`：开始计时
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl+T` | 聊天 |
+| `Ctrl+N` | 换姿势 |
+| `Ctrl+M` | 去右下角 |
+| `Ctrl+S` | 设置 |
+| `Ctrl+R` | 记住偏好 |
+| `Ctrl+P` | 设置性格 |
+| `Ctrl+L` | 查看记忆 |
+| `Ctrl+I` | 开始计时 |
+| `Ctrl+Q` / `Esc` | 退出 |
 
-## 鼠标 / 触控板
+## 鼠标操作
 
-- 点一下熊：聊天
-- 按住拖动：移动熊
-- 右键熊：打开菜单
+- **单击** - 聊天
+- **拖动** - 移动位置
+- **右键** - 打开菜单
+
+## 设置选项
+
+在右键菜单中选择"设置"可以调整：
+
+- **GIF 播放速度** - 0.5x / 0.8x / 1x / 1.25x / 1.5x / 2x
+- **自动切换姿势** - 开启/关闭自动轮播
+
+## 自定义熊的动画
+
+1. 准备 `.gif` 文件（建议透明背景）
+2. 放入 `assets` 文件夹
+3. 多个 GIF 会按文件名顺序轮播
+4. 右键熊 → 刷新 GIF 立即生效
+
+## 项目结构
+
+```
+windows/
+├── bear_app.py              # 主程序源码
+├── build.py                 # 打包脚本
+├── 启动熊.vbs               # 启动脚本（推荐，无黑窗口）
+├── start.bat                # 启动脚本（英文）
+├── start-debug.bat          # 调试启动脚本（英文）
+├── assets/                  # GIF 资源文件夹
+│   └── bear_idle.gif        # 示例动画
+└── Resources/               # 图标等资源
+```
+
+## 环境要求
+
+- Windows 10 / 11
+- Python 3.7+（直接运行时）
+- DeepSeek API Key（聊天功能）
+
+## 版本历史
+
+### v1.1.0
+- 新增设置面板，支持 GIF 速度调节
+- 增强健壮性，完善错误提示
+- 优化项目结构
+- 新增打包脚本
+
+### v1.0.0
+- 初始版本
