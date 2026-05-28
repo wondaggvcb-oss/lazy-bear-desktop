@@ -391,8 +391,8 @@ class BearApp:
         self.last_bubble = None
         self.asset_paths = []
         
-        # 加载资源
-        self.asset_paths = self._resolve_assets(show_error=True)
+        # 加载资源（初始化时不显示错误提示）
+        self.asset_paths = self._resolve_assets(show_error=False)
         self.load_state(0)
         self.move_to_bottom_right()
         self._bind_events()

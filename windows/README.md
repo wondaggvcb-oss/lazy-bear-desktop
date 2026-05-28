@@ -8,7 +8,7 @@
 
 1. 确保已安装 Python 3.7+
 2. 把自己的 GIF 放入 `assets` 文件夹
-3. 双击 **`启动熊.vbs`**（推荐，无黑窗口）
+3. 双击 **`run-bear.vbs`**（推荐，无黑窗口）
    
    或者双击 `start.bat`（英文界面，避免编码问题）
 
@@ -74,7 +74,7 @@ python build.py
 windows/
 ├── bear_app.py              # 主程序源码
 ├── build.py                 # 打包脚本
-├── 启动熊.vbs               # 启动脚本（推荐，无黑窗口）
+├── run-bear.vbs             # 启动脚本（推荐，无黑窗口）
 ├── start.bat                # 启动脚本（英文）
 ├── start-debug.bat          # 调试启动脚本（英文）
 ├── assets/                  # GIF 资源文件夹

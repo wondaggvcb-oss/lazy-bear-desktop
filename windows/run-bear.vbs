@@ -1,18 +1,18 @@
-' 熊 / Lazy Bear Desktop 启动器
-' 此脚本用于无窗口启动熊
+' Bear / Lazy Bear Desktop Launcher
+' This script starts Bear without showing a command window
 
 Dim WshShell
 Set WshShell = CreateObject("WScript.Shell")
 
-' 获取当前目录
+' Get current directory
 Dim currentDir
 currentDir = Left(WScript.ScriptFullName, InStrRev(WScript.ScriptFullName, "\") - 1)
 
-' 检查 Python
+' Check Python
 Dim pythonCmd
 pythonCmd = "pythonw"
 
-' 尝试启动
+' Try to start
 Dim cmd
 cmd = "cmd /c cd /d """ & currentDir & """ && " & pythonCmd & " bear_app.py"
 
@@ -20,12 +20,13 @@ On Error Resume Next
 WshShell.Run cmd, 0, False
 
 If Err.Number <> 0 Then
-    ' pythonw 失败，尝试 python
+    ' pythonw failed, try python
     cmd = "cmd /c cd /d """ & currentDir & """ && python bear_app.py"
+    Err.Clear
     WshShell.Run cmd, 0, False
     
     If Err.Number <> 0 Then
-        MsgBox "启动失败，请确保已安装 Python 3.7+", vbCritical, "熊"
+        MsgBox "Failed to start. Please install Python 3.7+", vbCritical, "Bear"
     End If
 End If
 
