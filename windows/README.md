@@ -16,9 +16,22 @@
 - 如果双击后没有看到熊，请检查屏幕右下角
 - 双击 `start-debug.bat` 查看调试信息（英文，避免乱码）
 
-### 方法二：打包成可执行文件（推荐分发）
+### 方法二：直接使用打包好的 exe（无需 Python）
+
+1. 在 `dist/LazyBear-Windows.zip` 中找到打包好的文件
+2. 解压后双击 `熊.exe` 即可运行
+3. **无需安装 Python 环境！**
+
+打包文件说明：
+- `熊.exe` - 主程序（约 9MB，独立运行）
+- `assets/` - GIF 资源文件夹（放入 .gif 文件即可自动加载）
+
+**自动检测功能**：程序会自动检测 assets 文件夹的变化，放入 GIF 后无需手动刷新！
+
+### 方法三：自己打包
 
 ```bash
+cd windows
 python build.py
 ```
 
@@ -74,12 +87,14 @@ python build.py
 windows/
 ├── bear_app.py              # 主程序源码
 ├── build.py                 # 打包脚本
-├── run-bear.vbs             # 启动脚本（推荐，无黑窗口）
-├── start.bat                # 启动脚本（英文）
-├── start-debug.bat          # 调试启动脚本（英文）
+├── run-bear.vbs             # 启动脚本（开发用）
+├── start.bat                # 启动脚本（开发用）
+├── start-debug.bat          # 调试启动脚本
 ├── assets/                  # GIF 资源文件夹
-│   └── bear_idle.gif        # 示例动画
-└── Resources/               # 图标等资源
+└── dist/                    # 打包输出
+    └── LazyBear-Windows/
+        ├── 熊.exe           # 独立可执行文件
+        └── assets/          # 用户放入 GIF
 ```
 
 ## 环境要求

@@ -128,55 +128,14 @@ def main():
         shutil.copy2(exe_source, exe_target)
         print(f"      已复制: 熊.exe")
     
-    # 复制 assets 文件夹（用于用户自定义）
+    # 创建空的 assets 文件夹（用户自行放入 GIF）
     release_assets = release_dir / "assets"
     release_assets.mkdir(exist_ok=True)
+    print("      已创建: assets/ 文件夹")
     
-    # 复制示例 GIF（如果有）
-    if gifs:
-        for gif in gifs:
-            shutil.copy2(gif, release_assets / gif.name)
-        print(f"      已复制 {len(gifs)} 个 GIF 到 assets/")
-    
-    # 创建启动脚本
-    bat_content = '''@echo off
-chcp 65001 >nul
-title 熊
-cd /d "%~dp0"
-start "" "熊.exe"
-'''
-    (release_dir / "启动熊.bat").write_text(bat_content, encoding='utf-8')
-    print("      已创建: 启动熊.bat")
-    
-    # 创建说明文件
-    readme_content = '''熊 / Lazy Bear Desktop - Windows 版
-================================
-
-使用方法:
-1. 双击 "启动熊.bat" 运行
-   或直接双击 "熊.exe"
-
-2. 自定义熊的动画:
-   将自己的 .gif 文件放入 assets 文件夹
-   支持多个 GIF 自动轮播
-
-3. 快捷键:
-   Ctrl+T - 聊天
-   Ctrl+N - 换姿势
-   Ctrl+M - 去右下角
-   Ctrl+S - 设置
-   Ctrl+Q 或 Esc - 退出
-
-4. 右键熊可以打开菜单
-
-注意:
-- 首次聊天需要输入 DeepSeek API Key
-- Key 会被加密保存在本地
-
-版本: 1.1.0
-'''
-    (release_dir / "使用说明.txt").write_text(readme_content, encoding='utf-8')
-    print("      已创建: 使用说明.txt")
+    # 同时创建 exe 旁边的 assets
+    exe_assets = dist_dir / "assets"
+    exe_assets.mkdir(exist_ok=True)
     
     # 清理临时文件
     print("      清理临时文件...")

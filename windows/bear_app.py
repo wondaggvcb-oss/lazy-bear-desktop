@@ -390,10 +390,18 @@ class BearApp:
         self.reminders = []
         self.last_bubble = None
         self.asset_paths = []
+        self.first_run_tip_shown = False  # 是否已显示首次运行提示
+        self.last_asset_count = 0  # 上次检测到的 GIF 数量
         
         # 加载资源（初始化时不显示错误提示）
         self.asset_paths = self._resolve_assets(show_error=False)
+        self.last_asset_count = len(self.asset_paths)
         self.load_state(0)
+        
+        # 首次运行时如果没有 GIF，显示提示
+        if not self.asset_paths:
+            self._show_first_run_tip()
+        
         self.move_to_bottom_right()
         self._bind_events()
         self._schedule_saved_reminders()
@@ -402,6 +410,46 @@ class BearApp:
         # 启动自动切换
         if self.store.get_config("auto_switch", True):
             self._schedule_auto_switch()
+        
+        # 启动 assets 文件夹监听
+        self._schedule_asset_check()
+    
+    def _show_first_run_tip(self):
+        """显示首次运行提示（只显示一次）"""
+        if self.first_run_tip_shown:
+            return
+        self.first_run_tip_shown = True
+        self.root.after(500, lambda: messagebox.showinfo(
+            "欢迎使用熊 🐻",
+            "请将自己的 .gif 动画文件放入 assets 文件夹，\n"
+            "程序会自动检测并加载。\n\n"
+            "支持多个 GIF 自动轮播！"
+        ))
+    
+    def _schedule_asset_check(self):
+        """调度 assets 文件夹检查（每 2 秒检查一次）"""
+        self.root.after(2000, self._check_assets_change)
+    
+    def _check_assets_change(self):
+        """检查 assets 文件夹是否有变化"""
+        current_gifs = self._discover_assets()
+        current_count = len(current_gifs)
+        
+        # 检测到新文件
+        if current_count > self.last_asset_count and current_count > 0:
+            # 如果之前没有 GIF，现在有了，自动加载
+            if self.last_asset_count == 0:
+                self._show_bubble("检测到 GIF 文件，正在加载...")
+                self.reload_all()
+            else:
+                # 有新 GIF 添加
+                self._show_bubble(f"检测到 {current_count - self.last_asset_count} 个新 GIF")
+                self.reload_all()
+        
+        self.last_asset_count = current_count
+        
+        # 继续调度检查
+        self._schedule_asset_check()
     
     def _apply_window_icon(self):
         """应用窗口图标"""
@@ -555,13 +603,21 @@ class BearApp:
         if not hasattr(self, 'current_frames') or not self.current_frames:
             return
         
-        frame = self.current_frames[self.frame_index % len(self.current_frames)]
-        self.label.configure(image=frame)
-        self.label.image = frame
-        self.root.geometry(f"{frame.width()}x{frame.height()}")
-        self.frame_index += 1
+        num_frames = len(self.current_frames)
+        current_idx = self.frame_index % num_frames
         
-        # 根据速度设置计算延迟
+        try:
+            frame = self.current_frames[current_idx]
+            self.label.configure(image=frame)
+            self.label.image = frame
+            self.root.geometry(f"{frame.width()}x{frame.height()}")
+        except (IndexError, tk.TclError) as e:
+            pass
+        
+        self.frame_index += 1
+        if self.frame_index >= num_frames * 1000:
+            self.frame_index = self.frame_index % num_frames
+        
         speed_preset = self.store.get_config("gif_speed", DEFAULT_SPEED)
         speed_multiplier = SPEED_PRESETS.get(speed_preset, 1.0)
         delay = int(BASE_ANIMATION_DELAY / speed_multiplier)
@@ -572,11 +628,11 @@ class BearApp:
         """显示空状态占位符"""
         if self.after_id:
             self.root.after_cancel(self.after_id)
-        self.root.geometry("170x170")
+        self.root.geometry("200x120")
         self.label.configure(
             image="", 
-            text="熊\n请把 GIF\n放进 assets 文件夹", 
-            font=("Microsoft YaHei", 12), 
+            text="🐻\n\n请把 .gif 文件\n放入 assets 文件夹\n\n右键 → 刷新 GIF", 
+            font=("Microsoft YaHei", 10), 
             fg="#8B6914", 
             bg=TRANSPARENT_COLOR, 
             compound="center"
