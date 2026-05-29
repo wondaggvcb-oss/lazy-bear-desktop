@@ -1,4 +1,4 @@
-# Android 版
+# Android 版（暂不可用debug中勿下载）
 
 Android 版是一个 Flutter 安卓桌面宠物熊。
 
