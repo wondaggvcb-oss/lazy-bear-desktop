@@ -1,9 +1,5 @@
 # 更新日志
 
-## 2026-05-28
-
-- 修改文字
-
 ## 2026-05-21
 
 - 增加 Windows 版：使用 Python/Tkinter 运行，支持聊天、记忆、性格和计时。
@@ -42,9 +38,8 @@
 - 修复 Android 多个安全隐患：移除不必要的电池优化权限、修复线程安全问题、补齐 ProGuard 规则。
 - macOS 和 Windows 的 API Key 输入提示中补充了粘贴说明（⌘V / Ctrl+V）。
 - 根目录 README 更新为三版本总入口（macOS + Windows + Android）。
-- 创建三平台发布包：LazyBear-Android.apk / LazyBear-Windows.zip / LazyBear-macOS.zip，不含版权 GIF。
+- 创建二平台发布包：LazyBear-Windows.zip / LazyBear-macOS.zip，不含GIF。
 - macOS 和 Windows 版支持无 GIF 启动，显示占位提示界面，不再崩溃退出。
 - macOS 构建脚本允许无 GIF 构建；Windows 版右键菜单新增「刷新 GIF」。
-- 根目录 README 新增「普通用户下载」区块，引导用户去 Releases 页面而非 clone 源码。
+- 根目录 README 新增「普通用户下载」区块，引导用户去 Releases 页面而非 clone 源码，降低领养难度。
 - 每个发布包内含 README_普通用户版.md，覆盖下载、GIF 放置、启动和常见问题。
-- 新增 Android APK 构建配置：compileSdk=36、disableCompileSdkChecks、coreLibraryDesugaring。
