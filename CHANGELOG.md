@@ -31,13 +31,8 @@
 
 ## 2026-05-27
 
-- 新增 Android 版：Flutter + Kotlin 原生悬浮桌宠，支持 GIF 皮肤管理、轮换和每日提醒。
-- Android 版加入聊天功能：通过 DeepSeek API 和熊对话，API Key 保存在本地。
-- Android 版通过 MethodChannel + 本地广播实现 Flutter 与原生悬浮窗通信。
-- Android 版闹钟广播接收器添加 BOOT_COMPLETED 支持，重启后提醒不丢失。
-- 修复 Android 多个安全隐患：移除不必要的电池优化权限、修复线程安全问题、补齐 ProGuard 规则。
 - macOS 和 Windows 的 API Key 输入提示中补充了粘贴说明（⌘V / Ctrl+V）。
-- 根目录 README 更新为三版本总入口（macOS + Windows + Android）。
+- 根目录 README 更新为两个版本总入口（macOS + Windows ）。
 - 创建二平台发布包：LazyBear-Windows.zip / LazyBear-macOS.zip，不含GIF。
 - macOS 和 Windows 版支持无 GIF 启动，显示占位提示界面，不再崩溃退出。
 - macOS 构建脚本允许无 GIF 构建；Windows 版右键菜单新增「刷新 GIF」。
