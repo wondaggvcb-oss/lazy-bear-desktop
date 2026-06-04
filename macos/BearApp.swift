@@ -123,8 +123,6 @@ final class BearImageView: NSImageView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKey()
         mouseDownScreenPoint = NSEvent.mouseLocation
         windowStartOrigin = window?.frame.origin ?? .zero
         didDrag = false
@@ -235,7 +233,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             name: NSWorkspace.didWakeNotification,
             object: nil
         )
-        NSApp.activate(ignoringOtherApps: true)
         let stateTimer = Timer(timeInterval: 16, repeats: true) { [weak self] _ in
             self?.nextState()
         }
@@ -318,8 +315,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.contentView?.wantsLayer = true
         window.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
         window.delegate = self
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.makeKeyAndOrderFront(nil)
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        showPetWindowWithoutFocus()
     }
 
     private func contextMenu() -> NSMenu {
@@ -522,7 +519,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let width = max(70, floor(image.size.width * ratio))
         let height = max(70, floor(image.size.height * ratio))
         window.setContentSize(NSSize(width: width, height: height))
-        window.makeKeyAndOrderFront(nil)
+        showPetWindowWithoutFocus()
     }
 
     private func moveToBottomRight() {
@@ -551,27 +548,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         imageView.animates = false
         window.contentView = view
         moveToBottomRight()
-        window.makeKeyAndOrderFront(nil)
+        showPetWindowWithoutFocus()
     }
 
     private func startChat() {
-        nextState()
+        continueChat(history: [])
+    }
+
+    private func continueChat(history: [[String: String]]) {
         guard let question = prompt(title: "熊", message: "你好你好，有什么可以帮您") else {
+            showPetWindowWithoutFocus()
             return
         }
         let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
+            showPetWindowWithoutFocus()
             return
         }
         if isTimeQuestion(trimmed) {
-            showAlert(title: "熊说：", text: localTimeAnswer())
+            let wantsMore = showAnswerAndAskToContinue(title: "熊说：", text: localTimeAnswer())
+            if wantsMore {
+                continueChat(history: history)
+            } else {
+                showPetWindowWithoutFocus()
+            }
             return
         }
         guard let key = ensureAPIKey() else {
             showState(index: 0)
             return
         }
-        askDeepSeek(apiKey: key, question: trimmed)
+        nextState()
+        sendDeepSeek(apiKey: key, question: trimmed, history: history) { [weak self] answer, failure in
+            guard let self else { return }
+            if let failure {
+                if self.isAuthError(failure) {
+                    self.clearInvalidKeyAndRetry(question: trimmed, history: history)
+                } else {
+                    self.showAlert(title: "熊说不出来", text: failure)
+                    self.showPetWindowWithoutFocus()
+                }
+                return
+            }
+            let answerText = answer ?? "熊短暂离线。"
+            let updatedHistory = self.updatedChatHistory(history, user: trimmed, assistant: answerText)
+            let wantsMore = self.showAnswerAndAskToContinue(title: "熊说：", text: answerText)
+            if wantsMore {
+                self.continueChat(history: updatedHistory)
+            } else {
+                self.showPetWindowWithoutFocus()
+            }
+        }
     }
 
     private func rememberPreference() {
@@ -714,6 +741,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         for reminder in dueReminders {
             fireReminder(reminder)
         }
+        showPetWindowWithoutFocus()
     }
 
     private func scheduleReminder(_ reminder: BearReminder) {
@@ -895,10 +923,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func askDeepSeek(apiKey: String, question: String) {
         nextState()
-        sendDeepSeek(apiKey: apiKey, question: question) { [weak self] answer, failure in
+        sendDeepSeek(apiKey: apiKey, question: question, history: []) { [weak self] answer, failure in
             guard let self else { return }
             if let failure {
-                self.showAlert(title: "熊说不出来", text: failure)
+                if self.isAuthError(failure) {
+                    self.clearInvalidKeyAndRetry(question: question, history: [])
+                } else {
+                    self.showAlert(title: "熊说不出来", text: failure)
+                }
                 return
             }
             self.showAlert(title: "熊说：", text: answer ?? "熊短暂离线。")
@@ -907,18 +939,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func askDeepSeekForBubble(apiKey: String, question: String) {
         nextState()
-        sendDeepSeek(apiKey: apiKey, question: question) { [weak self] answer, failure in
+        sendDeepSeek(apiKey: apiKey, question: question, history: []) { [weak self] answer, failure in
             guard let self else { return }
             self.isCommentingOnScreen = false
             if let failure {
-                self.showBubble("刚刚说不出来：\(failure)")
+                if self.isAuthError(failure) {
+                    self.showBubble("API Key 无效，熊已经忘了旧的。")
+                    self.stopWatchingScreen()
+                } else {
+                    self.showBubble("刚刚说不出来：\(failure)")
+                }
                 return
             }
             self.showBubble(answer ?? "熊短暂离线。")
         }
     }
 
-    private func sendDeepSeek(apiKey: String, question: String, completion: @escaping (String?, String?) -> Void) {
+    private func sendDeepSeek(apiKey: String, question: String, history: [[String: String]], completion: @escaping (String?, String?) -> Void) {
+        var messages = [["role": "system", "content": systemPromptWithMemory()]]
+        messages.append(contentsOf: history.suffix(20))
+        messages.append(["role": "user", "content": question])
+
         var request = URLRequest(url: deepSeekURL)
         request.httpMethod = "POST"
         request.timeoutInterval = 30
@@ -926,10 +967,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "model": "deepseek-chat",
-            "messages": [
-                ["role": "system", "content": systemPromptWithMemory()],
-                ["role": "user", "content": question],
-            ],
+            "messages": messages,
         ])
 
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
@@ -1006,7 +1044,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         bubble.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         bubble.contentView = view
         bubbleWindow = bubble
-        bubble.orderFront(nil)
+        bubble.orderFrontRegardless()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self, weak bubble] in
             guard let self, let bubble, self.bubbleWindow === bubble else { return }
@@ -1050,28 +1088,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func prompt(title: String, message: String, secure: Bool = false) -> String? {
+        activateForModal()
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
         alert.addButton(withTitle: "好")
         alert.addButton(withTitle: "算了")
 
-        let field: NSTextField = secure
-            ? NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
-            : NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        let field: NSTextField
+        if secure && !title.lowercased().contains("api key") {
+            field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        } else {
+            field = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        }
+        field.isSelectable = true
+        field.isEditable = true
         alert.accessoryView = field
-        window.makeKeyAndOrderFront(nil)
+        alert.window.initialFirstResponder = field
         let result = alert.runModal()
         return result == .alertFirstButtonReturn ? field.stringValue : nil
     }
 
     private func confirm(title: String, text: String) -> Bool {
+        activateForModal()
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = text
         alert.addButton(withTitle: "清空")
         alert.addButton(withTitle: "算了")
-        window.makeKeyAndOrderFront(nil)
         return alert.runModal() == .alertFirstButtonReturn
     }
 
@@ -1122,12 +1166,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func showAlert(title: String, text: String) {
+        activateForModal()
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = text
         alert.addButton(withTitle: "好")
-        window.makeKeyAndOrderFront(nil)
         alert.runModal()
+    }
+
+    private func showAnswerAndAskToContinue(title: String, text: String) -> Bool {
+        activateForModal()
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        alert.addButton(withTitle: "继续聊")
+        alert.addButton(withTitle: "关掉")
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func updatedChatHistory(_ history: [[String: String]], user: String, assistant: String) -> [[String: String]] {
+        let next = history + [
+            ["role": "user", "content": user],
+            ["role": "assistant", "content": assistant],
+        ]
+        return Array(next.suffix(20))
+    }
+
+    private func activateForModal() {
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func showPetWindowWithoutFocus() {
+        guard NSApp.modalWindow == nil else { return }
+        window.orderFrontRegardless()
+    }
+
+    private func isAuthError(_ failure: String) -> Bool {
+        let lower = failure.lowercased()
+        return lower.contains("authentication") || lower.contains("invalid")
+            || lower.contains("401") || lower.contains("api key")
+    }
+
+    private func clearInvalidKeyAndRetry(question: String, history: [[String: String]]) {
+        apiKey = nil
+        _ = runSecurity(["delete-generic-password", "-a", keychainAccount, "-s", keychainService])
+        guard let newKey = prompt(title: "DeepSeek API Key", message: "旧的 Key 已失效。请输入新 Key，熊会重新记下来。", secure: true),
+              !newKey.isEmpty else {
+            showState(index: 0)
+            return
+        }
+        apiKey = newKey
+        saveKeyToKeychain(newKey)
+        sendDeepSeek(apiKey: newKey, question: question, history: history) { [weak self] answer, failure in
+            guard let self else { return }
+            if let failure {
+                self.showAlert(title: "熊说不出来", text: failure)
+                self.showPetWindowWithoutFocus()
+                return
+            }
+            let answerText = answer ?? "熊短暂离线。"
+            let updatedHistory = self.updatedChatHistory(history, user: question, assistant: answerText)
+            let wantsMore = self.showAnswerAndAskToContinue(title: "熊说：", text: answerText)
+            if wantsMore {
+                self.continueChat(history: updatedHistory)
+            } else {
+                self.showPetWindowWithoutFocus()
+            }
+        }
     }
 
     private func readKeyFromKeychain() -> String? {

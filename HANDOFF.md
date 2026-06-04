@@ -1,30 +1,30 @@
-# 熊项目交接文档
+# 熊项目维护说明
 
-这份文档给新的 Codex / ChatGPT 窗口快速接手用。
+这份文档记录项目结构、维护约定和最近改动，方便之后继续开发。
 
-## 当前项目
+## 项目概况
 
 - 项目名：熊 / lazy-bear-desktop
-- GitHub 仓库：https://github.com/entity-cc/lazy-bear-desktop
-- 本机路径：`/Users/liuliuliu/Documents/Codex/2026-05-13/cd/lazy-bear-desktop`
-- 当前分支：`main`
-- 当前本地状态：已与 `origin/main` 同步
-- 最新提交：`0fd3999 Document minimal update steps`
-- 应用名：`熊`
+- GitHub 仓库：https://github.com/wondaggvcb-oss/lazy-bear-desktop
+- 默认应用名：`熊`
+- 当前主要平台：macOS、Windows
+- 默认分支：`main`
 
-## 用户想要的熊
+仓库只放代码和说明文档，不内置个人 GIF、图标和构建产物。
 
-熊是一个桌面宠物，不是普通工具软件。
+## 熊的设定
 
-核心气质：
+熊是桌面宠物，不是传统工具软件。
+
+默认性格：
 
 - 懒懒的
 - 温暖可爱
 - 一针见血
 - 喜欢人类
-- 觉得用户是被熊领养的人
-- 熊不一定很有用，但会努力照顾好人
-- 不要热血，不要油腻，不要长篇说教
+- 觉得人是被熊领养的
+- 不一定很有用，但会认真照顾人
+- 不热血，不油腻，不长篇说教
 
 聊天入口第一句固定显示：
 
@@ -32,14 +32,14 @@
 你好你好，有什么可以帮您
 ```
 
-但后续回答不要每次机械重复这句。
+后续回答不要机械重复这句。
 
 ## 当前功能
 
 macOS 版：
 
 - 桌面悬浮 GIF 熊
-- 点击聊天
+- 点击聊天，支持连续对话
 - 拖动移动
 - 双指点 / 右键打开菜单
 - 换姿势
@@ -51,12 +51,13 @@ macOS 版：
 - 手动开启“看屏幕/停下”
 - 使用 DeepSeek API 聊天
 - API Key 存进 macOS 钥匙串
+- DeepSeek key 失效时会清掉旧 key，并提示重新输入
 
 Windows 版：
 
 - Python/Tkinter 桌面熊
 - 桌面悬浮 GIF 熊
-- 点击聊天
+- 点击聊天，支持连续对话
 - 拖动移动
 - 右键菜单
 - 换姿势
@@ -65,29 +66,42 @@ Windows 版：
 - 简单计时提醒
 - 使用 DeepSeek API 聊天
 - API Key 存本机用户数据目录
+- 右键菜单支持“重设 API Key”
+- `start-bear.bat` 检查 Python 版本并启动熊
+- `create-desktop-shortcut.bat` 创建桌面快捷方式
 - 暂时不做看屏幕 OCR
 
-## 重要目录
+## 最近改动
+
+2026-06-04：
+
+- macOS 修复台前调度下的焦点问题。熊换姿势、显示气泡和计时检查时不再反复成为 key window。
+- macOS 浮窗增加 `.stationary` 和 `.ignoresCycle` 行为，减少被台前调度收进后台的情况。
+- macOS 只在主动打开聊天、确认框、计时设置等弹窗时激活应用。
+- macOS 和 Windows 都支持连续聊天。回答后可以选择继续聊或关掉，继续时保留最近上下文。
+- Windows 新增 `start-bear.bat`，避免误进 Python `>>>` 后把文件路径当代码输入。
+- Windows 新增 `README_普通用户版.md`，说明解压、启动、放 GIF、安装新版 Python、重设 API Key。
+- Windows 新增 `create-desktop-shortcut.bat`。
+- Windows 右键菜单新增“重设 API Key”。
+
+## 重要文件
 
 ```text
 README.md
 CHANGELOG.md
+HANDOFF.md
 macos/BearApp.swift
 macos/build.sh
+macos/entitlements.plist
 macos/README.md
-macos/assets/
-macos/Resources/
 windows/bear_windows.py
 windows/README.md
-windows/assets/
-windows/Resources/
+windows/README_普通用户版.md
+windows/start-bear.bat
+windows/create-desktop-shortcut.bat
 ```
 
-## 素材规则
-
-仓库不应该上传用户自己的 GIF 和图标。
-
-这些目录是本机素材目录：
+本机素材目录：
 
 ```text
 macos/assets/
@@ -96,30 +110,39 @@ windows/assets/
 windows/Resources/
 ```
 
-当前本机状态：
+这些素材目录默认不提交。
 
-- `macos/assets/` 有 35 个 GIF
-- `windows/assets/` 有 35 个 GIF
-- 桌面版 app 在 `/Users/liuliuliu/Desktop/熊.app`
-- 桌面版 app 已经用这 35 个 GIF 重建过
+## 素材规则
 
-`.gitignore` 已经忽略素材和构建产物。不要把 GIF、`.icns`、`.ico`、`.app`、`dist/` 上传到 GitHub。
+仓库不内置个人 GIF 和图标。
+
+不要提交：
+
+```text
+*.gif
+*.GIF
+*.ico
+*.icns
+*.app
+dist/
+*.zip
+```
+
+使用者自己把 GIF 放进对应平台的 `assets/` 文件夹即可。
 
 ## GIF 读取逻辑
 
-之前的 bug：只支持固定文件名 `jokebear_idle.gif` 等，用户把新 GIF 拖进文件夹不会自动进入轮播。
-
-现在的逻辑：
+当前逻辑：
 
 - macOS：构建时把 `macos/assets/` 里所有 `.gif` / `.GIF` 打包进 app。
 - macOS：app 内按文件名顺序读取 `Contents/Resources/assets/` 里的所有 GIF。
 - macOS：换姿势时会重新扫描 app bundle 里的 assets。
 - Windows：运行时读取 `windows/assets/` 里所有 `.gif` / `.GIF`。
 - Windows：换姿势或自动轮播时会重新扫描 assets。
-- Windows：同名替换 GIF 后会根据修改时间和大小重新加载，不会卡旧缓存。
-- Windows：数字排序已修复，`2.gif` 会排在 `10.gif` 前面。
+- Windows：同名替换 GIF 后会根据修改时间和大小重新加载。
+- Windows：数字排序已处理，`2.gif` 会排在 `10.gif` 前面。
 
-控制轮播顺序的建议：
+控制轮播顺序可以给文件名前面加编号：
 
 ```text
 001_idle.gif
@@ -127,61 +150,70 @@ windows/Resources/
 003_lie.gif
 ```
 
-## 本机 macOS 构建
-
-构建：
+## macOS 构建
 
 ```bash
-cd /Users/liuliuliu/Documents/Codex/2026-05-13/cd/lazy-bear-desktop/macos
+cd macos
 ./build.sh
-```
-
-打开构建产物：
-
-```bash
 open dist/熊.app
 ```
 
-覆盖桌面版：
+如果只改 `macos/assets/`，也需要重新运行 `./build.sh`，因为 macOS app 使用的是打包进 `.app` 的资源。
+
+覆盖本机桌面版时可以这样做：
 
 ```bash
-pkill -f LazyBear || true
-rm -rf /Users/liuliuliu/Desktop/熊.app
-ditto /Users/liuliuliu/Documents/Codex/2026-05-13/cd/lazy-bear-desktop/macos/dist/熊.app /Users/liuliuliu/Desktop/熊.app
-open /Users/liuliuliu/Desktop/熊.app
+osascript -e 'tell application "熊" to quit' >/dev/null 2>&1 || true
+rm -rf ~/Desktop/熊.app
+cp -R macos/dist/熊.app ~/Desktop/熊.app
+open ~/Desktop/熊.app
 ```
-
-注意：如果只改 `macos/assets/`，也需要重新运行 `./build.sh`，因为 macOS app 使用的是打包进 `.app` 的资源。
 
 ## Windows 运行
 
-Windows 版核心文件：
-
-```text
-windows/bear_windows.py
-```
-
-运行：
+源码目录里推荐：
 
 ```powershell
 cd windows
+start-bear.bat
+```
+
+也可以手动运行：
+
+```powershell
 python bear_windows.py
 ```
 
-如果用户是从测试包运行，确保 `assets/` 和 `Resources/` 与 `bear_windows.py` 在同级目录。
-
-## 最小更新说明
-
-README 已经补了“更新旧版本”。
-
-给旧用户的最小替换：
+发布给非开发者时，建议结构：
 
 ```text
-macOS：替换 macos/BearApp.swift 和 macos/build.sh，然后重新运行 ./build.sh
-Windows：替换 windows/bear_windows.py，然后重新运行 python bear_windows.py
+熊/
+启动熊.bat
+创建桌面快捷方式.bat
+先看我.txt
+app/
+  bear_windows.py
+  assets/
+  Resources/
 ```
 
-明确提醒用户不要删除：
+`start-bear.bat` 同时兼容源码目录和 `app/` 子目录结构。
+
+## 旧版本最小更新
+
+macOS：
+
+```text
+替换 macos/BearApp.swift 和 macos/build.sh，然后重新运行 ./build.sh
+```
+
+Windows：
+
+```text
+替换 windows/bear_windows.py、windows/start-bear.bat 和 windows/README_普通用户版.md，然后重新运行 start-bear.bat
+```
+
+不要删除：
 
 ```text
 macos/assets/
@@ -190,100 +222,58 @@ windows/assets/
 windows/Resources/
 ```
 
-## GitHub 注意事项
+## 验证方式
 
-已经成功推到 GitHub。
+macOS：
 
-提交作者已经改成：
+```bash
+cd macos
+./build.sh
+open dist/熊.app
+```
+
+重点检查：
+
+- 台前调度开启时点熊聊天，输入停留超过 5 秒不应丢焦点。
+- 熊回答后点“继续聊”，应能接上上一句上下文。
+- 点“关掉”后，熊回到桌面悬浮状态。
+- 换姿势、气泡和计时检查不应抢走其他 app 的输入焦点。
+
+Windows：
+
+```bash
+python3 -m py_compile windows/bear_windows.py
+```
+
+重点检查：
+
+- 双击 `start-bear.bat` 能启动。
+- Python 太旧时会给中文提示。
+- 右键“重设 API Key”能重新保存 key。
+- 回答后选择继续聊能带上下文。
+
+## 提交注意
+
+提交作者使用：
 
 ```text
 wondaggvcb-oss <wondaggvcb-oss@users.noreply.github.com>
 ```
 
-不要再用真实姓名提交。
-
-本仓库本地 Git 配置已经设置：
+提交前检查：
 
 ```bash
-git config user.name "wondaggvcb-oss"
-git config user.email "wondaggvcb-oss@users.noreply.github.com"
-```
-
-如果之后要推更新：
-
-```bash
-cd /Users/liuliuliu/Documents/Codex/2026-05-13/cd/lazy-bear-desktop
 git status
-git add README.md CHANGELOG.md macos/BearApp.swift macos/build.sh macos/README.md windows/bear_windows.py windows/README.md
-git commit -m "简短说明"
-git push origin main
+git diff --stat
+git diff --cached --stat
 ```
 
-不要提交本机素材。
+只提交代码和文档，不提交本机素材、构建产物和密钥。
 
-## 安全提醒
+## 文案习惯
 
-用户之前把 GitHub token 发到聊天里过。那个 token 应该视为泄露，需要在 GitHub 里 revoke。
-
-以后不要让用户把 token、DeepSeek API Key 或其他密钥发到聊天窗口。
-
-## 用户偏好
-
-- 用户喜欢中文说明，面向中文用户。
-- 说明要具体，不要只说“更新文件”，要告诉替换哪个文件、保留哪个文件夹。
-- 用户很在意桌面美观，不能随便删 icon、GIF、桌面 app。
-- 用户不喜欢像素丑熊，倾向使用自己下载的 GIF。
-- 用户希望熊“像真的桌面宠物”，可爱、懒、暖，但不要烦人。
-- 用户希望触控板可用，所以交互说明要包含点按、拖动、双指点/右键。
-- 用户不想在 GitHub README 里强调版权问题，只说自己放 GIF / 图标。
-- 用户不喜欢在 UI 和文案里用 emoji（比如 🐻），统一用纯文字「熊」代替。
-
-## 发布包（2026-05-27 已完成）
-
-发布包已创建，放在 `~/Desktop/lazy-bear-release/`：
-
-| 目录 | 内容 |
-|------|------|
-| `LazyBear-Windows/` | `bear_windows.py` + `启动熊.bat` + `assets/占位文件` + `README_普通用户版.md` |
-| `LazyBear-macOS/` | `熊.app`（占位模式，无 GIF）+ `README_普通用户版.md` |
-
-桌面也有打好的 zip：
-- `~/Desktop/LazyBear-Windows.zip`（10K）
-- `~/Desktop/LazyBear-macOS.zip`（338K）
-
-这些包**不含版权 GIF**，只有占位文件。用户拿到后自己放 GIF 进 assets 即可。
-
-### 发布包要点
-
-- **macOS 和 Windows 版都支持无 GIF 启动**，会显示占位提示而不是崩溃
-- macOS 占位界面：棕色圆角方块 + "熊：请把你的 GIF 放进 assets 文件夹"
-- Windows 占位界面：透明窗口 + 棕色文字提示，右键菜单有"刷新 GIF"
-- 每个包内都有 `README_普通用户版.md`，写明了下载、GIF 放置、启动、API Key、常见问题
-
-### 代码修改总结（本次发布相关）
-
-- `macos/BearApp.swift`：`loadAssets()` 无 GIF 时不再退出，显示 `showPlaceholderBear()`
-- `macos/build.sh`：允许无 GIF 构建，不再 `exit 1`
-- `windows/bear_windows.py`：`resolve_assets()` 不抛异常，`show_empty_placeholder()` + `reload_all()` + 右键"刷新 GIF"
-- 根 `README.md`：新增 📦 普通用户下载 区块，指向 GitHub Releases
-
-### GitHub Release 创建步骤
-
-1. Push 所有变更到 GitHub
-2. 在 https://github.com/entity-cc/lazy-bear-desktop/releases 点 "Draft a new release"
-3. Tag 版本号（如 `v1.1.0`），Release title 写 `熊 v1.1.0`
-4. 上传文件：
-   - `~/Desktop/LazyBear-Windows.zip`
-   - `~/Desktop/LazyBear-macOS.zip`
-5. 发布
-
-## 下一步可能任务
-
-可能会继续做：
-
-- macOS app 快捷键更稳定，尤其是退出快捷键。
-- "按熊心情换图"功能。可以先做开关，接 DeepSeek 让模型返回一个短心情标签，再映射到 GIF 文件名或随机图。
-- 更自然的主动互动，不要频繁打扰。
-- GitHub Release 自动化（GitHub Actions 构建 + 发布）。
-
-先修 bug 优先，复杂 AI 心情功能可以后做。
+- 面向中文使用者，说明要具体。
+- 少用抽象介绍，多写实际操作步骤。
+- 不强调素材来源，只说明“自己放 GIF / 图标”。
+- 不使用表情符号。
+- 用「熊」称呼应用，不用额外拟物符号。

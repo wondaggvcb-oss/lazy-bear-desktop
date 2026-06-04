@@ -148,6 +148,7 @@ class BearApp:
 
         self.menu = tk.Menu(self.root, tearoff=0)
         self.menu.add_command(label="聊天", command=self.start_chat)
+        self.menu.add_command(label="重设 API Key", command=self.reset_api_key)
         self.menu.add_command(label="换姿势", command=self.next_state)
         self.menu.add_command(label="去右下角", command=self.move_to_bottom_right)
         self.menu.add_separator()
@@ -344,19 +345,23 @@ class BearApp:
         self.menu.tk_popup(event.x_root, event.y_root)
 
     def start_chat(self):
+        self.continue_chat([])
+
+    def continue_chat(self, history):
         question = simpledialog.askstring("熊", "你好你好，有什么可以帮您", parent=self.root)
         if not question or not question.strip():
             return
         question = question.strip()
         if self.is_time_question(question):
             self.next_state()
-            messagebox.showinfo("熊说：", self.local_time_answer())
+            if self.ask_continue(self.local_time_answer()):
+                self.continue_chat(history)
             return
         key = self.ensure_api_key()
         if not key:
             return
         self.next_state()
-        threading.Thread(target=self.ask_deepseek, args=(key, question, False), daemon=True).start()
+        threading.Thread(target=self.ask_deepseek, args=(key, question, False, history), daemon=True).start()
 
     def ensure_api_key(self):
         key = self._get_api_key()
@@ -368,6 +373,23 @@ class BearApp:
             config["api_key"] = key  # write_config 会自动加密
             self.write_config(config)
         return key
+
+    def reset_api_key(self):
+        if os.getenv("DEEPSEEK_API_KEY"):
+            messagebox.showinfo("熊的 API Key", "现在使用的是环境变量 DEEPSEEK_API_KEY。要换 key，需要先改电脑环境变量。")
+            return
+        key = simpledialog.askstring(
+            "重设 DeepSeek API Key",
+            "把新的 key 粘贴进来。输错或过期时，就来这里重新填。",
+            show="*",
+            parent=self.root,
+        )
+        if not key or not key.strip():
+            return
+        config = self.read_config()
+        config["api_key"] = key.strip()
+        self.write_config(config)
+        self.show_bubble("Key 换好了。熊重新接线。")
 
     def read_config(self):
         """读取 config，自动解密 api_key_enc / 迁移旧明文。"""
@@ -464,13 +486,14 @@ class BearApp:
         parts.append("自定义性格优先于默认性格，但必须保留名字叫熊、回答简短、不要机械重复问候这几条底线。")
         return "\n\n".join(parts)
 
-    def ask_deepseek(self, api_key, question, bubble):
+    def ask_deepseek(self, api_key, question, bubble, history=None):
+        messages = [{"role": "system", "content": self.system_prompt_with_memory()}]
+        if history:
+            messages.extend(history[-20:])
+        messages.append({"role": "user", "content": question})
         payload = {
             "model": "deepseek-chat",
-            "messages": [
-                {"role": "system", "content": self.system_prompt_with_memory()},
-                {"role": "user", "content": question},
-            ],
+            "messages": messages,
         }
         data = json.dumps(payload).encode("utf-8")
         req = request.Request(
@@ -483,18 +506,43 @@ class BearApp:
             with request.urlopen(req, timeout=30) as response:
                 result = json.loads(response.read().decode("utf-8"))
             answer = result["choices"][0]["message"]["content"]
-            self.root.after(0, lambda: self.finish_answer(answer, bubble))
+            self.root.after(0, lambda: self.finish_answer(answer, bubble, history or [], question))
         except error.HTTPError as exc:
-            text = exc.read().decode("utf-8", errors="ignore")
+            text = self.friendly_http_error(exc)
             self.root.after(0, lambda: messagebox.showerror("熊说不出来", text))
         except Exception as exc:
             self.root.after(0, lambda: messagebox.showerror("熊说不出来", str(exc)))
 
-    def finish_answer(self, answer, bubble):
+    def friendly_http_error(self, exc):
+        detail = exc.read().decode("utf-8", errors="ignore").strip()
+        if exc.code in (401, 403):
+            return (
+                "DeepSeek API Key 可能输错、过期，或者余额/权限不对。\n\n"
+                "解决：右键熊 → 重设 API Key，然后粘贴新的 key。\n\n"
+                f"原始提示：{detail or exc.reason}"
+            )
+        if exc.code == 429:
+            return (
+                "DeepSeek 暂时请求太多了，等一会儿再试。\n\n"
+                f"原始提示：{detail or exc.reason}"
+            )
+        return detail or f"HTTP {exc.code}: {exc.reason}"
+
+    def finish_answer(self, answer, bubble, history=None, question=None):
         if bubble:
             self.show_bubble(answer)
         else:
-            messagebox.showinfo("熊说：", answer)
+            history = history or []
+            question = question or ""
+            updated_history = (history + [
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": answer},
+            ])[-20:]
+            if self.ask_continue(answer):
+                self.continue_chat(updated_history)
+
+    def ask_continue(self, answer):
+        return messagebox.askyesno("熊说：", f"{answer}\n\n继续聊吗？\n点“是”继续，点“否”关掉。")
 
     def remember_preference(self):
         text = simpledialog.askstring("熊记一下", "写一条你的偏好或要求。", parent=self.root)

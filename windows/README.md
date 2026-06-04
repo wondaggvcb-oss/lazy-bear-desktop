@@ -5,7 +5,7 @@ Windows 版是一个 Python/Tkinter 桌面熊。
 ## 环境要求
 
 - 适合 Windows 10 / 11 用户。
-- 需要安装 Python 3。
+- 需要安装 Python 3.8 或更新版本，推荐 Python 3.10+。
 - 聊天需要用户自己的 DeepSeek API Key。
 - 熊图请自己放到 `windows/assets/`。
 - 图标可选，放到 `windows/Resources/BearIcon.ico`。
@@ -26,7 +26,15 @@ mkdir assets
 copy C:\Users\你的名字\Downloads\your-bear.gif assets\
 ```
 
-运行：
+推荐运行：
+
+```powershell
+start-bear.bat
+```
+
+如果你的压缩包里有中文启动文件，也可以直接双击 `启动熊.bat`。
+
+也可以手动运行：
 
 ```powershell
 python bear_windows.py
@@ -38,14 +46,16 @@ python bear_windows.py
 py bear_windows.py
 ```
 
-也可以双击测试包里的 `start-bear.bat`。
+如果你看到 `Python 3.2.2` 和 `>>>`，说明你打开到了 Python 交互窗口。不要在 `>>>` 里输入 `.py` 文件路径，关掉窗口后双击 `启动熊.bat` 或 `start-bear.bat`。
 
 ## 旧版本如何更新
 
-如果你已经有旧版熊，最小更新只需要替换这个文件：
+如果你已经有旧版熊，最小更新只需要替换这些文件：
 
 ```text
 windows/bear_windows.py
+windows/start-bear.bat
+windows/README_普通用户版.md
 ```
 
 不要删除自己的素材：
@@ -59,7 +69,7 @@ windows/Resources/
 
 ```powershell
 cd windows
-python bear_windows.py
+start-bear.bat
 ```
 
 如果你是用 Git 下载的，直接运行：
@@ -67,7 +77,7 @@ python bear_windows.py
 ```powershell
 git pull
 cd windows
-python bear_windows.py
+start-bear.bat
 ```
 
 ## 多个姿势
@@ -98,7 +108,8 @@ Resources/BearIcon.ico
 
 ## 功能
 
-- 聊天
+- 连续聊天
+- 重设 API Key
 - 记住偏好
 - 自定义熊的性格
 - 简单计时
@@ -108,6 +119,10 @@ Resources/BearIcon.ico
 Windows 版暂时不做看屏幕 OCR，先保持开箱简单。
 
 打开聊天时，熊会先问一句“你好你好，有什么可以帮您”。后续回答不会每次重复这句固定问候。
+
+每次回答后可以选择继续聊或关掉。继续聊时，熊会记住这一轮里刚刚说过的上下文。
+
+如果 DeepSeek API Key 输错、过期，或者余额/权限不对，右键熊，选择 **重设 API Key**，重新粘贴新的 key。
 
 ## 透明效果
 

@@ -20,6 +20,3 @@ __pycache__/
 *.png
 *.gif
 *.GIF
-
-# Local dev docs (keep ai handoff notes local)
-HANDOFF.md
