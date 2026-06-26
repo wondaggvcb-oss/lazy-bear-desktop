@@ -1,5 +1,11 @@
 # 更新日志
 
+## 2026-06-26
+
+- macOS 构建产物从 `熊.app` 改为 `LazyBear.app`，避免中文 app 文件名在跨系统压缩、解压或 GitHub 下载时变成乱码。
+- macOS 发布说明文件改用英文文件名 `README_INSTALL.md`，降低 Windows / macOS 混用时的编码问题。
+- macOS 构建脚本支持通过 `BEAR_ASSETS_DIR` 指定素材目录，方便做不内置 GIF 的普通发布包。
+
 ## 2026-06-04
 
 - Windows 版新增 `start-bear.bat` 启动器：自动检查 Python 版本，避免用户误进 `>>>` 交互窗口后把文件路径当代码输入。

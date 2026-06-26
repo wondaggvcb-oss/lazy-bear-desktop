@@ -6,7 +6,7 @@
 
 - 项目名：熊 / lazy-bear-desktop
 - GitHub 仓库：https://github.com/wondaggvcb-oss/lazy-bear-desktop
-- 默认应用名：`熊`
+- 默认应用文件名：`LazyBear.app`（应用里的熊仍然叫“熊”）
 - 当前主要平台：macOS、Windows
 - 默认分支：`main`
 
@@ -94,6 +94,7 @@ macos/BearApp.swift
 macos/build.sh
 macos/entitlements.plist
 macos/README.md
+macos/README_INSTALL.md
 windows/bear_windows.py
 windows/README.md
 windows/README_普通用户版.md
@@ -155,7 +156,7 @@ dist/
 ```bash
 cd macos
 ./build.sh
-open dist/熊.app
+open dist/LazyBear.app
 ```
 
 如果只改 `macos/assets/`，也需要重新运行 `./build.sh`，因为 macOS app 使用的是打包进 `.app` 的资源。
@@ -164,9 +165,9 @@ open dist/熊.app
 
 ```bash
 osascript -e 'tell application "熊" to quit' >/dev/null 2>&1 || true
-rm -rf ~/Desktop/熊.app
-cp -R macos/dist/熊.app ~/Desktop/熊.app
-open ~/Desktop/熊.app
+rm -rf ~/Desktop/LazyBear.app
+cp -R macos/dist/LazyBear.app ~/Desktop/LazyBear.app
+open ~/Desktop/LazyBear.app
 ```
 
 ## Windows 运行
@@ -229,7 +230,7 @@ macOS：
 ```bash
 cd macos
 ./build.sh
-open dist/熊.app
+open dist/LazyBear.app
 ```
 
 重点检查：

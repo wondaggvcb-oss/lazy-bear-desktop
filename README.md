@@ -1,6 +1,6 @@
 # 熊 / lazy-bear-desktop
 
-一个桌面宠物项目。GitHub 仓库叫 `lazy-bear-desktop`，应用默认叫 **熊**。
+一个桌面宠物项目。GitHub 仓库叫 `lazy-bear-desktop`，应用里默认叫 **熊**。macOS 发布包里的文件名用 `LazyBear.app`，避免中文文件名在不同系统解压时乱码。
 
 熊会飘在桌面上，可以连续聊天、换姿势、移动到角落，也可以记住用户偏好、设置自己的性格、做简单计时。macOS 版还可以在你手动开启后读取屏幕文字，然后主动说一句短话。
 
@@ -13,7 +13,7 @@
 | 文件 | 平台 | 怎么用 |
 |------|------|--------|
 | `LazyBear-Windows.zip` | Windows 10/11 | 解压后双击 `启动熊.bat`（包里含使用说明） |
-| `LazyBear-macOS.zip` | macOS | 解压后双击 `熊.app`（包里含使用说明） |
+| `LazyBear-macOS.zip` | macOS | 解压后双击 `LazyBear.app`（包里含使用说明） |
 
 想自己构建或看源码，可以继续看下面的说明。
 
@@ -35,10 +35,10 @@ cd macos
 mkdir -p assets
 cp ~/Downloads/your-bear.gif assets/
 ./build.sh
-open dist/熊.app
+open dist/LazyBear.app
 ```
 
-macOS 版会生成 `macos/dist/熊.app`。如果没有单独准备图标，构建时会自动从 GIF 抽第一帧生成 app 图标。
+macOS 版会生成 `macos/dist/LazyBear.app`。如果没有单独准备图标，构建时会自动从 GIF 抽第一帧生成 app 图标。
 
 ### Windows
 
@@ -64,7 +64,7 @@ macOS 用户拉完后需要重新构建：
 ```bash
 cd macos
 ./build.sh
-open dist/熊.app
+open dist/LazyBear.app
 ```
 
 Windows 用户拉完后直接重新运行：

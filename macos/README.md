@@ -1,6 +1,6 @@
 # macOS 版
 
-生成出来的应用叫 **熊**。
+生成出来的应用文件叫 **LazyBear.app**，打开后里面的小熊仍然叫 **熊**。
 
 ## 环境要求
 
@@ -29,7 +29,7 @@ cp ~/Downloads/your-bear.gif assets/
 打开：
 
 ```bash
-open dist/熊.app
+open dist/LazyBear.app
 ```
 
 ## 旧版本如何更新
@@ -53,7 +53,7 @@ macos/Resources/
 ```bash
 cd macos
 ./build.sh
-open dist/熊.app
+open dist/LazyBear.app
 ```
 
 如果你是用 Git 下载的，直接运行：
@@ -70,7 +70,7 @@ cd macos
 
 只放一个 GIF 也可以；放多个 GIF 就会按顺序轮播。
 
-改完 `assets/` 后重新运行 `./build.sh`，新的 GIF 就会打包进 `dist/熊.app`。
+改完 `assets/` 后重新运行 `./build.sh`，新的 GIF 就会打包进 `dist/LazyBear.app`。
 
 想控制轮播顺序，给文件名前面加编号最省事，比如：
 

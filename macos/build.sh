@@ -2,22 +2,24 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="熊"
+APP_FILE_NAME="${APP_FILE_NAME:-LazyBear}"
+APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-熊}"
+ASSETS_DIR="${BEAR_ASSETS_DIR:-$ROOT/assets}"
 BUNDLE_ID="${BUNDLE_ID:-com.example.lazy-bear-desktop}"
-APP_DIR="$ROOT/dist/$APP_NAME.app"
+APP_DIR="$ROOT/dist/$APP_FILE_NAME.app"
 CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 ASSET_OUT="$RESOURCES/assets"
 
-mkdir -p "$ROOT/assets" "$ROOT/Resources"
+mkdir -p "$ASSETS_DIR" "$ROOT/Resources"
 
 gif_sources=()
 while IFS= read -r file; do
   gif_sources+=("$file")
-done < <(find "$ROOT/assets" -maxdepth 1 -type f -iname "*.gif" -print | sort -f)
+done < <(find "$ASSETS_DIR" -maxdepth 1 -type f -iname "*.gif" -print | sort -f)
 
-rm -rf "$APP_DIR"
+rm -rf "$APP_DIR" "$ROOT/dist/熊.app"
 mkdir -p "$MACOS" "$ASSET_OUT" "$ROOT/.build/module-cache"
 
 make_icon_from_gif() {
@@ -58,7 +60,7 @@ if [ "${#gif_sources[@]}" -gt 0 ]; then
   done
   echo "已复制 ${#gif_sources[@]} 个 GIF 到 app 包。"
 else
-  echo "没有找到 GIF，app 将以占位模式启动。请把自己的 .gif 放进 assets/ 文件夹后重新构建。"
+  echo "没有找到 GIF，app 将以占位模式启动。请把自己的 .gif 放进 assets 文件夹后重新构建，或放进 app 包内的 Contents/Resources/assets。"
 fi
 
 icon_block=""
@@ -84,13 +86,13 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleDisplayName</key>
-  <string>$APP_NAME</string>
+  <string>$APP_DISPLAY_NAME</string>
   <key>CFBundleExecutable</key>
   <string>LazyBear</string>$icon_block
   <key>CFBundleIdentifier</key>
   <string>$BUNDLE_ID</string>
   <key>CFBundleName</key>
-  <string>$APP_NAME</string>
+  <string>$APP_DISPLAY_NAME</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
