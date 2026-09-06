@@ -13,7 +13,7 @@
 | 文件 | 平台 | 怎么用 |
 |------|------|--------|
 | `LazyBear-Windows.zip` | Windows 10/11 | 解压后双击 `start.bat`（包里含使用说明） |
-| `LazyBear-macOS.zip` | macOS | 解压后双击 `LazyBear.app`（包里含使用说明） |
+| `LazyBear-macOS.zip` | macOS | 解压后双击 `LazyBear.app`；如果提示“已损坏”，双击旁边的 `OpenBear.command` |
 
 想自己构建或看源码，可以继续看下面的说明。
 
@@ -66,6 +66,8 @@ cd macos
 ./build.sh
 open dist/LazyBear.app
 ```
+
+如果 macOS 下载后提示 App“已损坏”，不用重新下载，也不要手动猜路径。把 `OpenBear.command` 和 `LazyBear.app` 放在同一个文件夹，双击 `OpenBear.command`，熊会自己处理并打开。
 
 Windows 用户拉完后直接重新运行：
 

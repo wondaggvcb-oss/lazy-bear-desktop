@@ -2,6 +2,9 @@
 
 生成出来的应用文件叫 **LazyBear.app**，打开后里面的小熊仍然叫 **熊**。
 
+如果从网上下载后 macOS 提示 App“已损坏”，可以在发布包里双击 `OpenBear.command`，
+它会自动处理下载标记并打开旁边的 `LazyBear.app`。
+
 ## 环境要求
 
 - 适合 macOS 用户。

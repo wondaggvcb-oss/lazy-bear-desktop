@@ -4,6 +4,9 @@
 
 解压 `LazyBear-macOS.zip` 后，双击整个 `LazyBear.app`。
 
+如果 macOS 提示 App“已损坏”，双击同文件夹里的 `OpenBear.command`。
+它会自动找到旁边的 `LazyBear.app`，处理下载标记并打开熊，不需要手动填写路径。
+
 不要进入下面这个位置直接双击 `LazyBear`：
 
 ```text
@@ -22,14 +25,19 @@ LazyBear.app/Contents/MacOS/LazyBear
 
 ## 如果提示已损坏
 
-打开终端，运行：
+推荐直接双击同文件夹里的：
 
-```bash
-xattr -cr ~/Downloads/LazyBear-macOS/LazyBear.app
-open ~/Downloads/LazyBear-macOS/LazyBear.app
+```text
+OpenBear.command
 ```
 
-如果你把 app 放到了别的位置，把命令里的路径换成实际位置。
+如果系统询问是否打开终端，选择“打开”。
+
+也可以手动处理。先在终端输入 `xattr -cr `（最后有一个空格），
+再把 Finder 里的 `LazyBear.app` 拖进终端，按回车；然后输入 `open `，
+再次把 `LazyBear.app` 拖进终端，按回车。
+
+不要照抄固定的 `~/Downloads/...` 路径，因为解压位置或文件夹名称可能不同。
 
 ## 放自己的 GIF
 
