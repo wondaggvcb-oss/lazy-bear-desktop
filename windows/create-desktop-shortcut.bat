@@ -3,7 +3,8 @@ chcp 65001 >nul
 title 创建熊快捷方式
 
 set "HERE=%~dp0"
-set "TARGET=%HERE%start-bear.bat"
+set "TARGET=%HERE%start.bat"
+if exist "%HERE%start-bear.bat" set "TARGET=%HERE%start-bear.bat"
 if exist "%HERE%启动熊.bat" set "TARGET=%HERE%启动熊.bat"
 
 set "WORKDIR=%HERE%"
@@ -14,7 +15,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$shell=New-Object -ComOb
 
 if errorlevel 1 (
     echo.
-    echo 快捷方式没有创建成功。没关系，直接双击“启动熊.bat”也可以。
+    echo 快捷方式没有创建成功。没关系，直接双击启动文件也可以。
     echo.
     pause
     exit /b 1

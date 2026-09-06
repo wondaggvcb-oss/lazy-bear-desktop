@@ -32,7 +32,7 @@ copy C:\Users\你的名字\Downloads\your-bear.gif assets\
 start-bear.bat
 ```
 
-如果你的压缩包里有中文启动文件，也可以直接双击 `启动熊.bat`。
+普通发布包里使用英文文件名，直接双击 `start.bat`。源码目录里也可以双击 `start-bear.bat`。
 
 也可以手动运行：
 
@@ -46,7 +46,7 @@ python bear_windows.py
 py bear_windows.py
 ```
 
-如果你看到 `Python 3.2.2` 和 `>>>`，说明你打开到了 Python 交互窗口。不要在 `>>>` 里输入 `.py` 文件路径，关掉窗口后双击 `启动熊.bat` 或 `start-bear.bat`。
+如果你看到 `Python 3.2.2` 和 `>>>`，说明你打开到了 Python 交互窗口。不要在 `>>>` 里输入 `.py` 文件路径，关掉窗口后双击 `start.bat` 或 `start-bear.bat`。
 
 ## 旧版本如何更新
 
@@ -55,7 +55,7 @@ py bear_windows.py
 ```text
 windows/bear_windows.py
 windows/start-bear.bat
-windows/README_普通用户版.md
+windows/README_INSTALL.txt
 ```
 
 不要删除自己的素材：
@@ -120,7 +120,7 @@ Windows 版暂时不做看屏幕 OCR，先保持开箱简单。
 
 打开聊天时，熊会先问一句“你好你好，有什么可以帮您”。后续回答不会每次重复这句固定问候。
 
-每次回答后可以选择继续聊或关掉。继续聊时，熊会记住这一轮里刚刚说过的上下文。
+熊回答后会直接出现输入框。想继续就直接打字；留空或取消就关掉这一轮聊天。继续聊时，熊会记住这一轮里刚刚说过的上下文。
 
 如果 DeepSeek API Key 输错、过期，或者余额/权限不对，右键熊，选择 **重设 API Key**，重新粘贴新的 key。
 

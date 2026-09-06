@@ -12,7 +12,7 @@
 
 | 文件 | 平台 | 怎么用 |
 |------|------|--------|
-| `LazyBear-Windows.zip` | Windows 10/11 | 解压后双击 `启动熊.bat`（包里含使用说明） |
+| `LazyBear-Windows.zip` | Windows 10/11 | 解压后双击 `start.bat`（包里含使用说明） |
 | `LazyBear-macOS.zip` | macOS | 解压后双击 `LazyBear.app`（包里含使用说明） |
 
 想自己构建或看源码，可以继续看下面的说明。
@@ -78,7 +78,7 @@ start-bear.bat
 
 ```text
 macOS：替换 macos/BearApp.swift 和 macos/build.sh，然后重新运行 ./build.sh
-Windows：替换 windows/bear_windows.py、windows/start-bear.bat 和 windows/README_普通用户版.md，然后重新运行 start-bear.bat
+Windows：替换 windows/bear_windows.py、windows/start-bear.bat 和 windows/README_INSTALL.txt，然后重新运行 start-bear.bat
 ```
 
 不要删除自己的这些文件夹：

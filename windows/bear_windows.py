@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import traceback
 from ctypes import wintypes
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +22,7 @@ CONFIG_FILE = APP_DIR / "config.json"
 BASE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 ASSET_DIR = BASE_DIR / "assets"
 ICON_PATH = BASE_DIR / "Resources" / "BearIcon.ico"
+STARTUP_LOG_FILE = APP_DIR / "startup-error.txt"
 TRANSPARENT_COLOR = "#00ff00"
 MAX_SIDE = 170
 
@@ -347,15 +349,19 @@ class BearApp:
     def start_chat(self):
         self.continue_chat([])
 
-    def continue_chat(self, history):
-        question = simpledialog.askstring("熊", "你好你好，有什么可以帮您", parent=self.root)
+    def continue_chat(self, history, next_question=None):
+        if next_question is None:
+            question = simpledialog.askstring("熊", "你好你好，有什么可以帮您", parent=self.root)
+        else:
+            question = next_question
         if not question or not question.strip():
             return
         question = question.strip()
         if self.is_time_question(question):
             self.next_state()
-            if self.ask_continue(self.local_time_answer()):
-                self.continue_chat(history)
+            next_question = self.ask_next_question(self.local_time_answer())
+            if next_question:
+                self.continue_chat(history, next_question)
             return
         key = self.ensure_api_key()
         if not key:
@@ -538,11 +544,19 @@ class BearApp:
                 {"role": "user", "content": question},
                 {"role": "assistant", "content": answer},
             ])[-20:]
-            if self.ask_continue(answer):
-                self.continue_chat(updated_history)
+            next_question = self.ask_next_question(answer)
+            if next_question:
+                self.continue_chat(updated_history, next_question)
 
-    def ask_continue(self, answer):
-        return messagebox.askyesno("熊说：", f"{answer}\n\n继续聊吗？\n点“是”继续，点“否”关掉。")
+    def ask_next_question(self, answer):
+        question = simpledialog.askstring(
+            "熊说：",
+            f"{answer}\n\n继续说点什么；留空或取消就关掉。",
+            parent=self.root,
+        )
+        if not question or not question.strip():
+            return None
+        return question.strip()
 
     def remember_preference(self):
         text = simpledialog.askstring("熊记一下", "写一条你的偏好或要求。", parent=self.root)
@@ -683,4 +697,25 @@ class BearApp:
 
 
 if __name__ == "__main__":
-    BearApp().run()
+    try:
+        BearApp().run()
+    except Exception as exc:
+        # pythonw.exe does not show a console, so keep a readable local log and
+        # show the first useful part of the traceback in a normal dialog.
+        try:
+            APP_DIR.mkdir(parents=True, exist_ok=True)
+            STARTUP_LOG_FILE.write_text(traceback.format_exc(), encoding="utf-8")
+        except Exception:
+            pass
+        try:
+            error_root = tk.Tk()
+            error_root.withdraw()
+            messagebox.showerror(
+                "熊启动失败",
+                "熊刚才没有启动成功。\n\n"
+                f"原因：{exc}\n\n"
+                f"详细记录在：\n{STARTUP_LOG_FILE}",
+            )
+            error_root.destroy()
+        except Exception:
+            pass

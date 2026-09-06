@@ -6,7 +6,7 @@
 
 1. 先把压缩包完整解压。
 2. 打开解压出来的文件夹。
-3. 双击 `启动熊.bat`。
+3. 双击 `start.bat`。如果你的版本里叫 `start-bear.bat`，也可以双击它。
 4. 如果熊出现了，就成功了。
 
 如果想放到桌面，双击 `创建桌面快捷方式.bat`，以后从桌面的“熊”打开就行。
@@ -18,10 +18,10 @@
 请直接关掉那个黑窗口，然后回到熊的文件夹，双击：
 
 ```text
-启动熊.bat
+start.bat
 ```
 
-如果 `启动熊.bat` 提示 Python 太旧，请安装 Python 3.10 或更新版本：
+如果 `start.bat` 或 `start-bear.bat` 提示 Python 太旧，请安装 Python 3.10 或更新版本：
 
 ```text
 https://www.python.org/downloads/windows/
@@ -33,7 +33,7 @@ https://www.python.org/downloads/windows/
 Add python.exe to PATH
 ```
 
-装好以后再双击 `启动熊.bat`。
+装好以后再双击启动文件。
 
 ## 如果聊天说不出来
 
@@ -90,4 +90,4 @@ app/Resources/BearIcon.ico
 
 第一次聊天时，需要输入自己的 DeepSeek API Key。这个 key 会保存在本机。
 
-熊回答后会问要不要继续聊。点“是”继续，点“否”关掉这一轮聊天。
+熊回答后会直接出现输入框。想继续就直接打字；留空或取消就关掉这一轮聊天。

@@ -5,6 +5,9 @@
 - macOS 构建产物从 `熊.app` 改为 `LazyBear.app`，避免中文 app 文件名在跨系统压缩、解压或 GitHub 下载时变成乱码。
 - macOS 发布说明文件改用英文文件名 `README_INSTALL.md`，降低 Windows / macOS 混用时的编码问题。
 - macOS 构建脚本支持通过 `BEAR_ASSETS_DIR` 指定素材目录，方便做不内置 GIF 的普通发布包。
+- Windows 普通发布包改用英文文件名入口：`start.bat`、`create-shortcut.bat`、`README_INSTALL.txt`，避免中文文件名在压缩包里乱码。
+- Windows 普通发布包不再内置个人 GIF，只保留空 `app/assets` 提示位。
+- Windows 聊天回复后改为直接显示输入框，继续聊天时不再使用“是/否”确认框。
 
 ## 2026-06-04
 
