@@ -2,12 +2,11 @@
 
 ## 2026-09-06
 
-- 修复 macOS 下载后提示 App“已损坏”时不容易打开的问题：发布包加入 `OpenBear.command`，双击它就会自动找到旁边的 `LazyBear.app` 并处理下载标记。
-- 修复 macOS 安装说明里路径写死的问题，不再要求用户猜 `~/Downloads/...`，也不用把熊拖到固定文件夹。
+- 修复 macOS 下载后提示 App已损坏不容易打开的问题：发布包加入 `OpenBear.command`，双击它就会自动找到旁边的 `LazyBear.app` 并处理下载标记。
+- 修复 macOS 安装说明里路径的问题。
 
 ## 2026-06-26
 
-- macOS 构建产物从 `熊.app` 改为 `LazyBear.app`，避免中文 app 文件名在跨系统压缩、解压或 GitHub 下载时变成乱码。
 - macOS 发布说明文件改用英文文件名 `README_INSTALL.md`，降低 Windows / macOS 混用时的编码问题。
 - macOS 构建脚本支持通过 `BEAR_ASSETS_DIR` 指定素材目录，方便做不内置 GIF 的普通发布包。
 - Windows 普通发布包改用英文文件名入口：`start.bat`、`create-shortcut.bat`、`README_INSTALL.txt`，避免中文文件名在压缩包里乱码。
